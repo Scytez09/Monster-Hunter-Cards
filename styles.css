@@ -1,0 +1,452 @@
+:root {
+  --bg: #08121e;
+  --bg-soft: #102337;
+  --panel: rgba(12, 27, 43, 0.9);
+  --panel-2: rgba(18, 37, 55, 0.96);
+  --card: #152b40;
+  --text: #f1f6f8;
+  --muted: #aebfca;
+  --line: rgba(157, 199, 218, 0.24);
+  --accent: #9ed8ec;
+  --accent-strong: #d7f4ff;
+  --shadow: rgba(1, 8, 16, 0.58);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background:
+    radial-gradient(circle at 80% 0%, rgba(113, 190, 220, 0.16), transparent 28%),
+    linear-gradient(180deg, var(--bg) 0%, #102337 38%, #07111c 100%);
+  background-attachment: fixed;
+  color: var(--text);
+}
+
+body.modal-open {
+  overflow: hidden;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem clamp(1rem, 2vw, 2rem);
+  background: rgba(8, 18, 30, 0.88);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(157, 199, 218, 0.2);
+}
+
+.brand-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.collection-menu {
+  position: relative;
+}
+
+.collection-menu summary {
+  list-style: none;
+}
+
+.collection-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.menu-button {
+  display: grid;
+  place-items: center;
+  width: 2.8rem;
+  height: 2.8rem;
+  border: 1px solid rgba(158, 216, 236, 0.45);
+  border-radius: 0.2rem;
+  background: rgba(158, 216, 236, 0.1);
+  color: var(--accent-strong);
+  cursor: pointer;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.menu-button:hover,
+.menu-button:focus-visible {
+  background: rgba(158, 216, 236, 0.2);
+}
+
+.collection-options {
+  position: absolute;
+  top: calc(100% + 0.7rem);
+  left: 0;
+  z-index: 15;
+  display: grid;
+  min-width: 18rem;
+  padding: 0.35rem;
+  border: 1px solid rgba(158, 216, 236, 0.3);
+  border-radius: 0.2rem;
+  background: #102337;
+  box-shadow: 0 12px 28px var(--shadow);
+}
+
+.collection-options-title {
+  margin: 0;
+  padding: 0.6rem 0.8rem 0.45rem;
+  color: var(--accent);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.collection-options button {
+  border: 0;
+  background: transparent;
+  color: #f1f6f8;
+  cursor: pointer;
+  padding: 0.7rem 0.8rem;
+  text-align: left;
+}
+
+.collection-options button:hover,
+.collection-options button:focus-visible {
+  background: rgba(158, 216, 236, 0.16);
+  color: var(--accent-strong);
+}
+
+.brand-label { /*TOP TEXT*/
+
+  margin: 0;
+  font-size: 1.08rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.brand-wrap h1 { /*TOP BOTTOM TEXT*/
+  
+  margin: 0 0 0.2rem;
+  color: var(--accent);;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.62rem;
+}
+
+.install-button {
+  border: 1px solid rgba(158, 216, 236, 0.5);
+  background: rgba(158, 216, 236, 0.1);
+  color: var(--text);
+  border-radius: 0.2rem;
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+}
+
+.hidden {
+  display: none;
+}
+
+.container {
+  width: min(1200px, calc(100% - 1.5rem));
+  margin: 0 auto;
+  padding: 1.5rem 0 3rem;
+}
+
+.results-panel { /*CARD GRID*/
+  background: linear-gradient(180deg, rgba(21, 43, 64, 0.94), rgba(10, 24, 39, 0.98));
+  border: 1px solid var(--line);
+  border-radius: 0.2rem;
+  box-shadow: 0 18px 38px var(--shadow);
+}
+
+.search-panel {
+  padding: 1.2rem 0 1.4rem;
+}
+
+.search-header,
+.results-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-left: -0.8rem;
+}
+
+.search-header {
+  margin-left: 0;
+}
+
+.results-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  
+}
+
+.eyebrow {
+  margin: 0 0 0.5rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.7rem;
+}
+
+.search-header h2 {
+  
+  margin: 0;
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  line-height: 1.1;
+}
+
+.result-pill,
+.sort-control,
+.filter-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid rgba(158, 216, 236, 0.28);
+  background: rgba(158, 216, 236, 0.09);
+  color: var(--text);
+  border-radius: 0.2rem;
+  padding: 0.45rem 0.8rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-right: 0.35rem;
+}
+
+.sort-control label,
+.filter-control label {
+  color: var(--muted);  
+}
+
+.sort-select {
+  border: 1px solid rgba(158, 216, 236, 0.36);
+  border-radius: 0.2rem;
+  background: rgba(8, 19, 31, 0.86);
+  color: var(--text);
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+  padding: 0.35rem 1.8rem 0.35rem 0.55rem;
+}
+
+.search-box {
+  position: relative;
+  margin-top: 1rem;
+}
+
+.search-box input {
+  width: 100%;
+  border: 1px solid rgba(174, 191, 202, 0.27);
+  border-radius: 0.2rem;
+  background: rgba(8, 19, 31, 0.86);
+  color: var(--text);
+  padding: 1rem 1.1rem;
+  font-size: 1rem;
+  outline: none;
+}
+
+.search-icon {
+  position: absolute;
+  top: 50%;
+  right: 1.1rem;
+  color: var(--muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.search-box input:not(:placeholder-shown) + .search-icon {
+  display: none;
+}
+
+.search-box input:focus {
+  border-color: rgba(158, 216, 236, 0.82);
+  box-shadow: 0 0 0 3px rgba(113, 190, 220, 0.16);
+}
+
+.results-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.results-panel {
+  margin-top: 1.4rem;
+  padding: 1rem 1rem 1.3rem;
+}
+
+.results-head {
+  padding: 0.2rem 0.2rem 0.9rem;
+}
+
+.results-head h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.card-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.8rem;
+}
+
+.card-item {
+  aspect-ratio: 747 / 1038;
+  flex: 0 0 220px;
+  border: 2px solid rgba(174, 191, 202, 0.35);
+  background: #0b1b2b;
+  border-radius: 0;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.card-item:hover,
+.card-item:focus-visible {
+  transform: translateY(-3px) ;
+  border-color: rgba(158, 216, 236, 0.84);
+  box-shadow: 0 0 0 1px rgba(158, 216, 236, 0.22), 0 14px 24px rgba(1, 8, 16, 0.48);
+}
+
+.card-item img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #0b1b2b;
+  border-radius: 0;
+}
+
+.card-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  background: rgba(2, 9, 17, 0.96);
+  perspective: 1200px;
+}
+
+.card-modal.hidden {
+  display: none;
+}
+
+.modal-image {
+  --card-rotate-x: 0deg;
+  --card-rotate-y: 0deg;
+  display: block;
+  width: min(92vw, 747px);
+  height: min(92vh, 1038px);
+  object-fit: contain;
+  border: 0;
+  background: transparent;
+  cursor: grab;
+  transform: rotateX(var(--card-rotate-x)) rotateY(var(--card-rotate-y));
+  transform-style: preserve-3d;
+  transition: transform 240ms ease;
+  touch-action: none;
+  user-select: none;
+}
+
+.modal-image.is-panning {
+  cursor: grabbing;
+  transition: none;
+}
+
+.modal-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 2.8rem;
+  height: 2.8rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(241, 246, 248, 0.52);
+  background: rgba(8, 18, 30, 0.88);
+  color: var(--text);
+  font-size: 2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .container {
+    width: min(100% - 1rem, 1200px);
+    padding-top: 0.75rem;
+  }
+
+  .search-panel {
+    padding: 1rem 0.85rem 1.1rem;
+  }
+
+  .search-header,
+  .results-head {
+    flex-direction: column;
+    align-items: flex-start;
+    margin-left: 0;
+  }
+
+  .results-left,
+  .results-controls,
+  .sort-control,
+  .filter-control {
+    width: 100%;
+  }
+
+  .results-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .results-left {
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .sort-control {
+    justify-content: space-between;
+    margin-right: 0;
+  }
+
+  .results-panel {
+    padding: 0.8rem 0.6rem 1rem;
+  }
+
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .card-item {
+    width: 100%;
+    min-width: 0;
+    flex-basis: auto;
+  }
+
+  .topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .install-button {
+    width: 100%;
+  }
+}

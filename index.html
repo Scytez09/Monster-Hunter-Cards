@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#08121e" />
+    <meta
+      name="description"
+      content="Search the Monster Hunter card collection by monster name using the full image library in the cards folder."
+    />
+    <title>Monster Hunter Card Search</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icons/monster-mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand-wrap">
+        <details class="collection-menu">
+          <summary class="menu-button" aria-label="Open game card collections">&#9776;</summary>
+          <div class="collection-options" role="menu" aria-label="Game card collections">
+            <h2 class="collection-options-title">Game Collections</h2>
+            <button type="button" role="menuitem" data-title="MONSTER HUNTER WORLD: ICEBORNE">
+              Monster Hunter World: Iceborne
+            </button>
+            <button type="button" role="menuitem" data-title="MONSTER HUNTER RISE: SUNBREAK">
+              Monster Hunter Rise: Sunbreak
+            </button>
+            <button type="button" role="menuitem" data-title="MONSTER HUNTER WILDS">
+              Monster Hunter Wilds
+            </button>
+          </div>
+        </details>
+        <div>
+          <p class="brand-label">Monster Hunter Card Collection</p>
+          <h1>By Scytez</h1>
+        </div>
+      </div>
+      <button id="install-button" class="install-button hidden" type="button">
+        Install App
+      </button>
+    </header>
+
+    <main class="container">
+      <section class="search-panel">
+        <div class="search-header">
+          <div>
+            <p class="eyebrow">GAME COLLECTION</p>
+            <h2>MONSTER HUNTER WORLD: ICEBORNE</h2>
+          </div>
+        </div>
+
+        <div class="search-box">
+          <input id="search-input" type="search" placeholder="Search Monsters..." aria-label="Search card collection" />
+          <span class="search-icon" aria-hidden="true">🔍︎</span>
+        </div>
+
+      </section>
+
+      <section class="results-panel" aria-labelledby="results-title">
+        <div class="results-head">
+          <div class="results-left">
+            <h3 id="results-title"></h3>
+            <div class="result-pill"><span id="card-count">0</span> cards found</div>
+          </div>
+          <div class="results-controls">
+            <div class="filter-control">
+              <label for="filter-select">Show</label>
+              <select id="filter-select" class="sort-select">
+                <option value="all">All</option>
+                <option value="Base">Base</option>
+                <option value="Iceborne">Iceborne</option>
+              </select>
+            </div>
+            <div class="sort-control">
+              <label for="sort-select">Sort by</label>
+              <select id="sort-select" class="sort-select">
+                <option value="name">Name</option>
+                <option value="number">Number</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div id="card-grid" class="card-grid"></div>
+      </section>
+    </main>
+
+    <div id="card-modal" class="card-modal hidden" role="dialog" aria-modal="true" aria-label="Fullscreen card viewer">
+      <button id="modal-close" class="modal-close" type="button" aria-label="Close fullscreen card viewer">&times;</button>
+      <img id="modal-image" class="modal-image" src="" alt="" />
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
