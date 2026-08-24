@@ -226,11 +226,16 @@ const installButton = document.getElementById("install-button");
 const cardModal = document.getElementById("card-modal");
 const modalImage = document.getElementById("modal-image");
 const modalClose = document.getElementById("modal-close");
+const modalPrevious = document.getElementById("modal-previous");
+const modalNext = document.getElementById("modal-next");
 
 let activeFilter = "all";
 let activeSort = "name";
 let deferredPrompt = null;
 let isPanningCard = false;
+let modalCardId = null;
+let touchStartX = 0;
+let touchStartY = 0;
 
 function getVisibleCards() {
   const query = searchInput.value.trim().toLowerCase();
@@ -272,8 +277,7 @@ function renderCards() {
         return;
       }
 
-      modalImage.src = card.image;
-      modalImage.alt = `${card.name} card`;
+      showModalCard(card);
       cardModal.classList.remove("hidden");
       document.body.classList.add("modal-open");
       modalClose.focus();
@@ -289,9 +293,34 @@ function renderCards() {
   });
 }
 
+function showModalCard(card, direction = "") {
+  modalCardId = card.id;
+  modalImage.src = card.image;
+  modalImage.alt = `${card.name} card`;
+
+  if (direction) {
+    modalImage.classList.remove("swipe-next", "swipe-previous");
+    void modalImage.offsetWidth;
+    modalImage.classList.add(direction === "next" ? "swipe-next" : "swipe-previous");
+  }
+}
+
+function moveModalCard(direction) {
+  const visibleCards = getVisibleCards();
+  const currentIndex = visibleCards.findIndex((card) => card.id === modalCardId);
+
+  if (currentIndex < 0 || visibleCards.length < 2) {
+    return;
+  }
+
+  const nextIndex = (currentIndex + direction + visibleCards.length) % visibleCards.length;
+  showModalCard(visibleCards[nextIndex], direction > 0 ? "next" : "previous");
+}
+
 function closeCardModal() {
   cardModal.classList.add("hidden");
   modalImage.src = "";
+  modalCardId = null;
   resetCardPerspective();
   document.body.classList.remove("modal-open");
 }
@@ -324,11 +353,24 @@ modalImage.addEventListener("pointermove", (event) => {
 
 modalImage.addEventListener("pointerdown", (event) => {
   isPanningCard = true;
+  if (event.pointerType === "touch") {
+    touchStartX = event.clientX;
+    touchStartY = event.clientY;
+  }
   modalImage.setPointerCapture(event.pointerId);
   updateCardPerspective(event);
 });
 
 modalImage.addEventListener("pointerup", (event) => {
+  if (event.pointerType === "touch") {
+    const horizontalDistance = event.clientX - touchStartX;
+    const verticalDistance = event.clientY - touchStartY;
+
+    if (Math.abs(horizontalDistance) > 60 && Math.abs(horizontalDistance) > Math.abs(verticalDistance) * 1.3) {
+      moveModalCard(horizontalDistance < 0 ? 1 : -1);
+    }
+  }
+
   isPanningCard = false;
   modalImage.releasePointerCapture(event.pointerId);
   resetCardPerspective();
@@ -346,6 +388,8 @@ modalImage.addEventListener("pointerleave", () => {
 });
 
 modalClose.addEventListener("click", closeCardModal);
+modalPrevious.addEventListener("click", () => moveModalCard(-1));
+modalNext.addEventListener("click", () => moveModalCard(1));
 cardModal.addEventListener("click", (event) => {
   if (event.target === cardModal) {
     closeCardModal();
@@ -355,19 +399,80 @@ cardModal.addEventListener("click", (event) => {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !cardModal.classList.contains("hidden")) {
     closeCardModal();
+  } else if (event.key === "ArrowLeft" && !cardModal.classList.contains("hidden")) {
+    moveModalCard(-1);
+  } else if (event.key === "ArrowRight" && !cardModal.classList.contains("hidden")) {
+    moveModalCard(1);
   }
 });
 
 searchInput.addEventListener("input", renderCards);
 
-sortSelect.addEventListener("change", () => {
-  activeSort = sortSelect.value;
+function setupCustomSelect(selectElement, onChange) {
+  const trigger = selectElement.querySelector(".custom-select-trigger");
+  const options = [...selectElement.querySelectorAll('[role="option"]')];
+
+  const close = (returnFocus = false) => {
+    selectElement.classList.remove("is-open");
+    trigger.setAttribute("aria-expanded", "false");
+
+    if (returnFocus) {
+      trigger.focus();
+    }
+  };
+
+  const selectOption = (option) => {
+    options.forEach((item) => item.setAttribute("aria-selected", String(item === option)));
+    selectElement.querySelector("[id$='-value']").textContent = option.textContent;
+    onChange(option.dataset.value);
+    close(true);
+  };
+
+  trigger.addEventListener("click", () => {
+    const isOpen = selectElement.classList.toggle("is-open");
+    trigger.setAttribute("aria-expanded", String(isOpen));
+
+    if (isOpen) {
+      selectElement.querySelector('[aria-selected="true"]').focus();
+    }
+  });
+
+  options.forEach((option, index) => {
+    option.addEventListener("click", () => selectOption(option));
+    option.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        close(true);
+      } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        const offset = event.key === "ArrowDown" ? 1 : -1;
+        options[(index + offset + options.length) % options.length].focus();
+      } else if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        selectOption(option);
+      }
+    });
+  });
+
+  return close;
+}
+
+setupCustomSelect(sortSelect, (value) => {
+  activeSort = value;
   renderCards();
 });
 
-filterSelect.addEventListener("change", () => {
-  activeFilter = filterSelect.value;
+setupCustomSelect(filterSelect, (value) => {
+  activeFilter = value;
   renderCards();
+});
+
+document.addEventListener("click", (event) => {
+  document.querySelectorAll(".custom-select.is-open").forEach((selectElement) => {
+    if (!selectElement.contains(event.target)) {
+      selectElement.classList.remove("is-open");
+      selectElement.querySelector(".custom-select-trigger").setAttribute("aria-expanded", "false");
+    }
+  });
 });
 
 collectionMenu.querySelectorAll("[data-title]").forEach((option) => {
