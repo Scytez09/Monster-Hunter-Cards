@@ -315,6 +315,8 @@ input {
   border-radius: 0;
   overflow: hidden;
   cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
   transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
@@ -363,6 +365,7 @@ input {
   transform-style: preserve-3d;
   transition: transform 240ms ease;
   touch-action: none;
+  -webkit-user-select: none;
   user-select: none;
 }
 
