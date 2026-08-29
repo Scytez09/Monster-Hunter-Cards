@@ -544,9 +544,13 @@ input {
   inset: 0;
   z-index: 20;
   display: grid;
-  place-items: center;
-  padding: 2rem;
-  perspective: 1200px;
+  /* minmax(0, 1fr), not 1fr: a plain 1fr track refuses to shrink below the
+     card's intrinsic height and the card overflows the viewer. */
+  grid-template-rows: minmax(0, 1fr) auto;
+  justify-items: center;
+  gap: 0.75rem;
+  padding: 1.75rem 1.5rem calc(env(safe-area-inset-bottom) + 0.9rem);
+  perspective: 1400px;
   animation: modal-backdrop-in 220ms ease-out both;
 }
 
@@ -554,16 +558,148 @@ input {
   display: none;
 }
 
+/* The stage and the arrows share one grid cell so the arrows sit centred on
+   the card, not on the modal as a whole. */
+.modal-stage {
+  grid-area: 1 / 1;
+  /* Flex, not grid: the card's max-height: 100% needs a container with a
+     definite height, and a nested auto grid row just sizes to the image. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0; /* lets the card shrink to the row instead of overflowing */
+  touch-action: pan-y;
+}
+
+.filmstrip-wrap {
+  grid-area: 2 / 1;
+}
+
+/* A soft aura so the card sits in its own pool of light rather than floating
+   on a flat wash. */
+.modal-stage::before {
+  position: absolute;
+  width: min(70vw, 620px);
+  height: min(70vw, 620px);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(113, 190, 220, 0.16), transparent 68%);
+  content: "";
+  pointer-events: none;
+}
+
 .modal-image {
   display: block;
-  width: min(92vw, 747px);
-  height: min(92vh, 1038px);
+  position: relative;
+  max-width: min(92vw, 747px);
+  max-height: 100%;
   object-fit: contain;
   border: 0;
   background: transparent;
   -webkit-user-select: none;
   user-select: none;
-  animation: modal-card-in 360ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  opacity: var(--drag-fade, 1);
+  filter: drop-shadow(0 18px 38px rgba(1, 8, 16, 0.65));
+  transform:
+    translate3d(var(--drag-x, 0px), 0, 0)
+    rotateX(var(--tilt-x, 0deg))
+    rotateY(calc(var(--tilt-y, 0deg) + var(--drag-tilt, 0deg)));
+  transition: transform 340ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms ease;
+  animation: modal-card-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* While a finger is down the card tracks it exactly — any easing here reads as
+   lag. The transition comes back on release so it springs home. */
+.modal-image.is-dragging {
+  transition: none;
+}
+
+/* --- Filmstrip ------------------------------------------------------------ */
+
+.filmstrip-wrap {
+  display: grid;
+  justify-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.filmstrip-caption {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 10px rgba(1, 8, 16, 0.8);
+}
+
+.filmstrip {
+  display: flex;
+  /* Positioned so the thumbnails measure their offsetLeft against the strip
+     itself — the scroll maths in app.js depends on it. */
+  position: relative;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: min(96vw, 960px);
+  /* Half a thumb of padding at each end, so the first and last cards can
+     still reach the centre of the strip. */
+  padding: 0.5rem calc(50% - 1.65rem);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.filmstrip::-webkit-scrollbar {
+  display: none;
+}
+
+.filmstrip:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+}
+
+.filmstrip-item {
+  flex: 0 0 3.3rem;
+  aspect-ratio: 747 / 1038;
+  padding: 0;
+  border: 1px solid rgba(241, 246, 248, 0.18);
+  border-radius: 4px;
+  background: #0b1b2b;
+  overflow: hidden;
+  cursor: pointer;
+  scroll-snap-align: center;
+  opacity: 0.42;
+  filter: saturate(0.55);
+  transform: scale(0.88);
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms ease,
+    filter 200ms ease, border-color 200ms ease, box-shadow 260ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.filmstrip-item img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.filmstrip-item:hover {
+  opacity: 0.8;
+  transform: scale(0.96);
+}
+
+.filmstrip-item[aria-selected="true"] {
+  opacity: 1;
+  filter: none;
+  transform: scale(1.16);
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 1px var(--accent-strong), 0 10px 22px rgba(1, 8, 16, 0.7);
 }
 
 @keyframes modal-backdrop-in {
@@ -596,6 +732,15 @@ input {
   .modal-image.swipe-next,
   .modal-image.swipe-previous {
     animation: none;
+  }
+
+  .modal-image,
+  .filmstrip-item {
+    transition-duration: 0.01ms;
+  }
+
+  .filmstrip {
+    scroll-behavior: auto;
   }
 }
 
@@ -643,17 +788,17 @@ input {
 }
 
 .modal-nav {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
+  grid-area: 1 / 1;
+  align-self: center;
+  z-index: 2;
 }
 
 .modal-previous {
-  left: 1rem;
+  justify-self: start;
 }
 
 .modal-next {
-  right: 1rem;
+  justify-self: end;
 }
 
 .modal-image.swipe-next {
@@ -664,27 +809,37 @@ input {
   animation: modal-swipe-previous 300ms ease-out both;
 }
 
+/* The incoming card arrives from the side you pulled it in from, slightly
+   small and turned away, then settles square on. */
 @keyframes modal-swipe-next {
   from {
-    opacity: 0.35;
-    translate: 2rem 0;
+    opacity: 0.2;
+    translate: 3.5rem 0;
+    scale: 0.94;
+    rotate: y 12deg;
   }
 
   to {
     opacity: 1;
     translate: 0 0;
+    scale: 1;
+    rotate: y 0deg;
   }
 }
 
 @keyframes modal-swipe-previous {
   from {
-    opacity: 0.35;
-    translate: -2rem 0;
+    opacity: 0.2;
+    translate: -3.5rem 0;
+    scale: 0.94;
+    rotate: y -12deg;
   }
 
   to {
     opacity: 1;
     translate: 0 0;
+    scale: 1;
+    rotate: y 0deg;
   }
 }
 

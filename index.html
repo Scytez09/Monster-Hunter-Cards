@@ -111,10 +111,16 @@
       <button id="modal-previous" class="modal-nav modal-previous" type="button" aria-label="View previous card">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L9 12 L15 19" /></svg>
       </button>
-      <img id="modal-image" class="modal-image" src="" alt="" />
+      <div class="modal-stage" id="modal-stage">
+        <img id="modal-image" class="modal-image" src="" alt="" draggable="false" />
+      </div>
       <button id="modal-next" class="modal-nav modal-next" type="button" aria-label="View next card">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5 L15 12 L9 19" /></svg>
       </button>
+      <div class="filmstrip-wrap">
+        <p class="filmstrip-caption" id="filmstrip-caption"></p>
+        <div class="filmstrip" id="filmstrip" role="listbox" aria-label="All cards" tabindex="0"></div>
+      </div>
     </div>
 
     <script src="app.js"></script>

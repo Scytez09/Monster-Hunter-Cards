@@ -226,7 +226,10 @@ const menuBackdrop = document.getElementById("menu-backdrop");
 const collectionTitle = document.querySelector(".search-header h2");
 const installButton = document.getElementById("install-button");
 const cardModal = document.getElementById("card-modal");
+const modalStage = document.getElementById("modal-stage");
 const modalImage = document.getElementById("modal-image");
+const filmstrip = document.getElementById("filmstrip");
+const filmstripCaption = document.getElementById("filmstrip-caption");
 const modalClose = document.getElementById("modal-close");
 const modalPrevious = document.getElementById("modal-previous");
 const modalNext = document.getElementById("modal-next");
@@ -242,10 +245,27 @@ window.addEventListener("resize", updateTopbarHeight);
 let activeFilter = "all";
 let activeSort = "name";
 let deferredPrompt = null;
-let isPanningCard = false;
 let modalCardId = null;
-let touchStartX = 0;
-let touchStartY = 0;
+
+// Card viewer state: the snapshot being browsed, where we are in it, and the
+// filmstrip geometry used to map scroll position to index.
+let viewerCards = [];
+let viewerIndex = -1;
+let filmstripItems = [];
+let filmstripStep = 1;
+let filmstripBase = 0;
+let isAutoScrolling = false;
+let autoScrollTimer = 0;
+let settleTimer = 0;
+let scrollFrame = 0;
+
+// Drag gesture state.
+let dragPointerId = null;
+let dragStartX = 0;
+let dragStartY = 0;
+let dragOffsetX = 0;
+let dragAxis = "";
+let swallowNextStageClick = false;
 
 function getVisibleCards() {
   const query = searchInput.value.trim().toLowerCase();
@@ -273,7 +293,7 @@ function renderCards() {
     .map(
       (card) => `
         <article class="card-item" tabindex="0" aria-label="${card.name}">
-          <img src="${card.image}" alt="${card.name} card" data-card-id="${card.id}" />
+          <img src="${card.image}" alt="${card.name} card" data-card-id="${card.id}" loading="lazy" />
         </article>
       `
     )
@@ -287,10 +307,7 @@ function renderCards() {
         return;
       }
 
-      showModalCard(card);
-      cardModal.classList.remove("hidden");
-      document.body.classList.add("modal-open");
-      modalClose.focus();
+      openCardModal(card);
     };
 
     cardItem.addEventListener("click", openCard);
@@ -303,8 +320,77 @@ function renderCards() {
   });
 }
 
-function showModalCard(card, direction = "") {
-  modalCardId = card.id;
+/* ---------------------------------------------------------------------------
+   Card viewer
+   The viewer works off a snapshot of whatever the grid is showing, so the
+   filmstrip, the arrows and the swipe all walk the same list in the same order.
+   --------------------------------------------------------------------------- */
+
+function buildFilmstrip() {
+  filmstrip.innerHTML = viewerCards
+    .map(
+      (card, index) => `
+        <button class="filmstrip-item" type="button" role="option" aria-selected="false"
+                data-index="${index}" tabindex="-1" aria-label="${card.name}">
+          <img src="${card.image}" alt="" loading="lazy" draggable="false" />
+        </button>
+      `
+    )
+    .join("");
+
+  filmstripItems = [...filmstrip.querySelectorAll(".filmstrip-item")];
+
+  // Geometry for turning a scroll position into an index and back. Measured
+  // from the real elements so it survives changes to thumb size and gap.
+  filmstripStep =
+    filmstripItems.length > 1 ? filmstripItems[1].offsetLeft - filmstripItems[0].offsetLeft : 1;
+  filmstripBase = filmstripItems.length ? centreOffsetFor(0) : 0;
+}
+
+function centreOffsetFor(index) {
+  const item = filmstripItems[index];
+  return item.offsetLeft - (filmstrip.clientWidth - item.offsetWidth) / 2;
+}
+
+function scrollFilmstripTo(index, behavior) {
+  if (!filmstripItems[index]) {
+    return;
+  }
+
+  isAutoScrolling = true;
+  filmstrip.scrollTo({ left: centreOffsetFor(index), behavior });
+
+  // Let the smooth scroll finish before trusting scroll events again, so the
+  // strip driving the card and the card driving the strip can't ping-pong.
+  clearTimeout(autoScrollTimer);
+  autoScrollTimer = setTimeout(() => {
+    isAutoScrolling = false;
+  }, behavior === "smooth" ? 420 : 60);
+}
+
+// Only the parts that are cheap on every frame of a fling: the highlight and
+// the caption. The full-size image is swapped separately, once things settle.
+function markActive(index) {
+  if (index === viewerIndex || !viewerCards[index]) {
+    return;
+  }
+
+  filmstripItems[viewerIndex]?.setAttribute("aria-selected", "false");
+  filmstripItems[index]?.setAttribute("aria-selected", "true");
+  viewerIndex = index;
+  modalCardId = viewerCards[index].id;
+  filmstripCaption.textContent =
+    `${viewerCards[index].name}  ·  ${viewerCards[index].numberCode || "—"}`;
+}
+
+function syncViewerImage(direction = "") {
+  const card = viewerCards[viewerIndex];
+
+  if (!card || modalImage.dataset.cardId === card.id) {
+    return;
+  }
+
+  modalImage.dataset.cardId = card.id;
   modalImage.src = card.image;
   modalImage.alt = `${card.name} card`;
 
@@ -313,87 +399,184 @@ function showModalCard(card, direction = "") {
     void modalImage.offsetWidth;
     modalImage.classList.add(direction === "next" ? "swipe-next" : "swipe-previous");
   }
+
+  // Warm the neighbours so an arrow press or a swipe lands on a decoded image.
+  [viewerIndex - 1, viewerIndex + 1].forEach((neighbour) => {
+    const wrapped = viewerCards[(neighbour + viewerCards.length) % viewerCards.length];
+    if (wrapped) {
+      new Image().src = wrapped.image;
+    }
+  });
+}
+
+function showCardAt(index, { direction = "", scrollStrip = true, behavior = "smooth" } = {}) {
+  markActive(index);
+  syncViewerImage(direction);
+
+  if (scrollStrip) {
+    scrollFilmstripTo(index, behavior);
+  }
 }
 
 function moveModalCard(direction) {
-  const visibleCards = getVisibleCards();
-  const currentIndex = visibleCards.findIndex((card) => card.id === modalCardId);
-
-  if (currentIndex < 0 || visibleCards.length < 2) {
+  if (viewerCards.length < 2) {
     return;
   }
 
-  const nextIndex = (currentIndex + direction + visibleCards.length) % visibleCards.length;
-  showModalCard(visibleCards[nextIndex], direction > 0 ? "next" : "previous");
+  const nextIndex = (viewerIndex + direction + viewerCards.length) % viewerCards.length;
+  showCardAt(nextIndex, { direction: direction > 0 ? "next" : "previous" });
+}
+
+function openCardModal(card) {
+  viewerCards = getVisibleCards();
+  viewerIndex = -1;
+
+  const startIndex = Math.max(0, viewerCards.findIndex((item) => item.id === card.id));
+
+  cardModal.classList.remove("hidden");
+  document.body.classList.add("modal-open");
+  buildFilmstrip();
+  showCardAt(startIndex, { behavior: "auto" });
+  modalClose.focus();
 }
 
 function closeCardModal() {
   cardModal.classList.add("hidden");
   modalImage.src = "";
+  delete modalImage.dataset.cardId;
+  filmstrip.innerHTML = "";
+  filmstripItems = [];
   modalCardId = null;
-  resetCardPerspective();
+  viewerIndex = -1;
+  resetCardTransform();
   document.body.classList.remove("modal-open");
 }
 
-function updateCardPerspective(event) {
-  const bounds = modalImage.getBoundingClientRect();
-  const horizontal = (event.clientX - bounds.left) / bounds.width;
-  const vertical = (event.clientY - bounds.top) / bounds.height;
-  const rotateY = (horizontal - 0.5) * 24;
-  const rotateX = (0.5 - vertical) * 24;
+/* --- Filmstrip scrubbing -------------------------------------------------- */
 
-  modalImage.style.setProperty("--card-rotate-x", `${rotateX}deg`);
-  modalImage.style.setProperty("--card-rotate-y", `${rotateY}deg`);
-  modalImage.classList.add("is-panning");
-}
-
-function resetCardPerspective() {
-  modalImage.classList.remove("is-panning");
-  modalImage.style.setProperty("--card-rotate-x", "0deg");
-  modalImage.style.setProperty("--card-rotate-y", "0deg");
-}
-
-modalImage.addEventListener("pointermove", (event) => {
-  if (event.pointerType === "touch" && !isPanningCard) {
+// Native scrolling does the momentum and the rubber-banding; we only translate
+// where it ended up into an index.
+filmstrip.addEventListener("scroll", () => {
+  if (isAutoScrolling || !filmstripItems.length) {
     return;
   }
 
-  updateCardPerspective(event);
-});
-
-modalImage.addEventListener("pointerdown", (event) => {
-  isPanningCard = true;
-  if (event.pointerType === "touch") {
-    touchStartX = event.clientX;
-    touchStartY = event.clientY;
+  if (!scrollFrame) {
+    scrollFrame = requestAnimationFrame(() => {
+      scrollFrame = 0;
+      const raw = Math.round((filmstrip.scrollLeft - filmstripBase) / filmstripStep);
+      markActive(Math.min(Math.max(raw, 0), viewerCards.length - 1));
+    });
   }
-  modalImage.setPointerCapture(event.pointerId);
-  updateCardPerspective(event);
+
+  // The big image is the expensive part, so it waits for a pause in the
+  // scrolling rather than being swapped on every thumbnail we fly past.
+  clearTimeout(settleTimer);
+  settleTimer = setTimeout(syncViewerImage, 90);
 });
 
-modalImage.addEventListener("pointerup", (event) => {
-  if (event.pointerType === "touch") {
-    const horizontalDistance = event.clientX - touchStartX;
-    const verticalDistance = event.clientY - touchStartY;
+filmstrip.addEventListener("click", (event) => {
+  const item = event.target.closest(".filmstrip-item");
 
-    if (Math.abs(horizontalDistance) > 60 && Math.abs(horizontalDistance) > Math.abs(verticalDistance) * 1.3) {
-      moveModalCard(horizontalDistance < 0 ? 1 : -1);
+  if (item) {
+    showCardAt(Number(item.dataset.index));
+  }
+});
+
+/* --- Drag / swipe on the card -------------------------------------------- */
+
+function resetCardTransform() {
+  modalImage.classList.remove("is-dragging");
+  modalImage.style.setProperty("--drag-x", "0px");
+  modalImage.style.setProperty("--drag-tilt", "0deg");
+  modalImage.style.setProperty("--tilt-x", "0deg");
+  modalImage.style.setProperty("--tilt-y", "0deg");
+  modalImage.style.removeProperty("--drag-fade");
+}
+
+// Mouse-only flourish: the card leans towards the cursor.
+function tiltToPointer(event) {
+  const bounds = modalImage.getBoundingClientRect();
+  const horizontal = (event.clientX - bounds.left) / bounds.width;
+  const vertical = (event.clientY - bounds.top) / bounds.height;
+
+  modalImage.style.setProperty("--tilt-y", `${(horizontal - 0.5) * 18}deg`);
+  modalImage.style.setProperty("--tilt-x", `${(0.5 - vertical) * 18}deg`);
+}
+
+modalStage.addEventListener("pointerdown", (event) => {
+  if (event.button > 0) {
+    return;
+  }
+
+  dragPointerId = event.pointerId;
+  dragStartX = event.clientX;
+  dragStartY = event.clientY;
+  dragOffsetX = 0;
+  dragAxis = "";
+  modalImage.classList.add("is-dragging");
+  modalStage.setPointerCapture(event.pointerId);
+});
+
+modalStage.addEventListener("pointermove", (event) => {
+  if (dragPointerId !== event.pointerId) {
+    if (event.pointerType === "mouse") {
+      tiltToPointer(event);
     }
+    return;
   }
 
-  isPanningCard = false;
-  modalImage.releasePointerCapture(event.pointerId);
-  resetCardPerspective();
+  const deltaX = event.clientX - dragStartX;
+  const deltaY = event.clientY - dragStartY;
+
+  // Wait until the gesture commits to an axis, so a vertical scroll on a phone
+  // isn't stolen and turned into a card change.
+  if (!dragAxis && Math.hypot(deltaX, deltaY) > 8) {
+    dragAxis = Math.abs(deltaX) > Math.abs(deltaY) ? "x" : "y";
+  }
+
+  if (dragAxis !== "x") {
+    return;
+  }
+
+  event.preventDefault();
+  dragOffsetX = deltaX;
+
+  const progress = Math.max(-1, Math.min(1, deltaX / modalStage.clientWidth));
+  modalImage.style.setProperty("--drag-x", `${deltaX}px`);
+  modalImage.style.setProperty("--drag-tilt", `${progress * -10}deg`);
+  modalImage.style.setProperty("--drag-fade", String(1 - Math.abs(progress) * 0.45));
 });
 
-modalImage.addEventListener("pointercancel", () => {
-  isPanningCard = false;
-  resetCardPerspective();
-});
+function endDrag(event) {
+  if (dragPointerId !== event.pointerId) {
+    return;
+  }
 
-modalImage.addEventListener("pointerleave", () => {
-  if (!isPanningCard) {
-    resetCardPerspective();
+  const threshold = Math.min(90, modalStage.clientWidth * 0.16);
+  const shouldAdvance = dragAxis === "x" && Math.abs(dragOffsetX) > threshold;
+
+  // A drag that ends off the card still fires a click on the stage. Without
+  // this the viewer would close every time you swiped past the card's edge.
+  swallowNextStageClick = dragAxis !== "";
+  dragPointerId = null;
+  dragAxis = "";
+  resetCardTransform();
+
+  if (shouldAdvance) {
+    moveModalCard(dragOffsetX < 0 ? 1 : -1);
+  }
+
+  dragOffsetX = 0;
+}
+
+modalStage.addEventListener("pointerup", endDrag);
+modalStage.addEventListener("pointercancel", endDrag);
+modalStage.addEventListener("pointerleave", (event) => {
+  if (dragPointerId === null) {
+    resetCardTransform();
+  } else {
+    endDrag(event);
   }
 });
 
@@ -401,7 +584,12 @@ modalClose.addEventListener("click", closeCardModal);
 modalPrevious.addEventListener("click", () => moveModalCard(-1));
 modalNext.addEventListener("click", () => moveModalCard(1));
 cardModal.addEventListener("click", (event) => {
-  if (event.target === cardModal) {
+  if (swallowNextStageClick) {
+    swallowNextStageClick = false;
+    return;
+  }
+
+  if (event.target === cardModal || event.target === modalStage) {
     closeCardModal();
   }
 });
