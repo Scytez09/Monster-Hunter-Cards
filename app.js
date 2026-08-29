@@ -1,76 +1,76 @@
 const cardFiles = [
-  "MHW CARD A RATHALOS.png",
-  "MHW CARD ACIDIC GLAVENUS.png",
-  "MHW CARD ALATREON.png",
-  "MHW CARD ANCIENT LESHEN.png",
-  "MHW CARD ANJA.png",
-  "MHW CARD B.DIABLOS.png",
-  "MHW CARD BANBARO.png",
-  "MHW CARD BARIOTH.png",
-  "MHW CARD BARROTH.png",
-  "MHW CARD BAZEL.png",
-  "MHW CARD BEHEMOTH.png",
-  "MHW CARD BEOTODUS.png",
-  "MHW CARD BLACKVEIL VAAL.png",
-  "MHW CARD BRACHYDIOS.png",
-  "MHW CARD BRUTE TIGREX.png",
-  "MHW CARD CORAL PUKEI.png",
-  "MHW CARD DEVILJHO.png",
-  "MHW CARD DIABLOS.png",
-  "MHW CARD DODOGAMA.png",
-  "MHW CARD EBONY ODOGARON.png",
-  "MHW CARD FATALIS.png",
-  "MHW CARD FROSTFANG BARIOTH.png",
-  "MHW CARD FULGUR ANJA.png",
-  "MHW CARD FURIOUS RAJANG.png",
-  "MHW CARD GARUGA.png",
-  "MHW CARD GIRROS.png",
-  "MHW CARD GLAVENUS.png",
-  "MHW CARD GOLD RATHIAN.png",
-  "MHW CARD JAGRAS.png",
-  "MHW CARD JYURATODUS.png",
-  "MHW CARD KIRIN.png",
-  "MHW CARD KULU.png",
-  "MHW CARD KULVE TAROTH 2.png",
-  "MHW CARD KUSHALA.png",
-  "MHW CARD LAVASIOTH.png",
-  "MHW CARD LEGIANA.png",
-  "MHW CARD LESHEN.png",
-  "MHW CARD LUNASTRA.png",
-  "MHW CARD NAMIELLE.png",
-  "MHW CARD NARGA.png",
-  "MHW CARD NERGIGANTE.png",
-  "MHW CARD NIGHT PAOLUMU.png",
-  "MHW CARD ODOGARON.png",
-  "MHW CARD P RATHIAN.png",
-  "MHW CARD PAOLUMU.png",
-  "MHW CARD PUKEI.png",
-  "MHW CARD RADOBAAN.png",
-  "MHW CARD RAGING BRACHY.png",
-  "MHW CARD RAJANG.png",
-  "MHW CARD RATHALOS.png",
-  "MHW CARD RATHIAN.png",
-  "MHW CARD RUINER NERG.png",
-  "MHW CARD SAFIJIIVA.png",
-  "MHW CARD SAVAGE JHO.png",
-  "MHW CARD SCARRED GARUGA.png",
-  "MHW CARD SEETHING BAZEL.png",
-  "MHW CARD SHARA 1.png",
-  "MHW CARD SHRIEKING LEGIANA.png",
-  "MHW CARD SILVER RATHALOS.png",
-  "MHW CARD STYGIAN ZINOGRE.png",
-  "MHW CARD TEOSTRA.png",
-  "MHW CARD TIGREX.png",
-  "MHW CARD TOBI.png",
-  "MHW CARD TRUE SHARA.png",
-  "MHW CARD TZITZI.png",
-  "MHW CARD URAGAAN.png",
-  "MHW CARD VAAL.png",
-  "MHW CARD VELKHANA.png",
-  "MHW CARD VIPER TOBI.png",
-  "MHW CARD XENO.png",
-  "MHW CARD ZINOGRE.png",
-  "MHW CARD ZORAH.png"
+  "MHW CARD A RATHALOS.jpg",
+  "MHW CARD ACIDIC GLAVENUS.jpg",
+  "MHW CARD ALATREON.jpg",
+  "MHW CARD ANCIENT LESHEN.jpg",
+  "MHW CARD ANJA.jpg",
+  "MHW CARD B.DIABLOS.jpg",
+  "MHW CARD BANBARO.jpg",
+  "MHW CARD BARIOTH.jpg",
+  "MHW CARD BARROTH.jpg",
+  "MHW CARD BAZEL.jpg",
+  "MHW CARD BEHEMOTH.jpg",
+  "MHW CARD BEOTODUS.jpg",
+  "MHW CARD BLACKVEIL VAAL.jpg",
+  "MHW CARD BRACHYDIOS.jpg",
+  "MHW CARD BRUTE TIGREX.jpg",
+  "MHW CARD CORAL PUKEI.jpg",
+  "MHW CARD DEVILJHO.jpg",
+  "MHW CARD DIABLOS.jpg",
+  "MHW CARD DODOGAMA.jpg",
+  "MHW CARD EBONY ODOGARON.jpg",
+  "MHW CARD FATALIS.jpg",
+  "MHW CARD FROSTFANG BARIOTH.jpg",
+  "MHW CARD FULGUR ANJA.jpg",
+  "MHW CARD FURIOUS RAJANG.jpg",
+  "MHW CARD GARUGA.jpg",
+  "MHW CARD GIRROS.jpg",
+  "MHW CARD GLAVENUS.jpg",
+  "MHW CARD GOLD RATHIAN.jpg",
+  "MHW CARD JAGRAS.jpg",
+  "MHW CARD JYURATODUS.jpg",
+  "MHW CARD KIRIN.jpg",
+  "MHW CARD KULU.jpg",
+  "MHW CARD KULVE TAROTH 2.jpg",
+  "MHW CARD KUSHALA.jpg",
+  "MHW CARD LAVASIOTH.jpg",
+  "MHW CARD LEGIANA.jpg",
+  "MHW CARD LESHEN.jpg",
+  "MHW CARD LUNASTRA.jpg",
+  "MHW CARD NAMIELLE.jpg",
+  "MHW CARD NARGA.jpg",
+  "MHW CARD NERGIGANTE.jpg",
+  "MHW CARD NIGHT PAOLUMU.jpg",
+  "MHW CARD ODOGARON.jpg",
+  "MHW CARD P RATHIAN.jpg",
+  "MHW CARD PAOLUMU.jpg",
+  "MHW CARD PUKEI.jpg",
+  "MHW CARD RADOBAAN.jpg",
+  "MHW CARD RAGING BRACHY.jpg",
+  "MHW CARD RAJANG.jpg",
+  "MHW CARD RATHALOS.jpg",
+  "MHW CARD RATHIAN.jpg",
+  "MHW CARD RUINER NERG.jpg",
+  "MHW CARD SAFIJIIVA.jpg",
+  "MHW CARD SAVAGE JHO.jpg",
+  "MHW CARD SCARRED GARUGA.jpg",
+  "MHW CARD SEETHING BAZEL.jpg",
+  "MHW CARD SHARA 1.jpg",
+  "MHW CARD SHRIEKING LEGIANA.jpg",
+  "MHW CARD SILVER RATHALOS.jpg",
+  "MHW CARD STYGIAN ZINOGRE.jpg",
+  "MHW CARD TEOSTRA.jpg",
+  "MHW CARD TIGREX.jpg",
+  "MHW CARD TOBI.jpg",
+  "MHW CARD TRUE SHARA.jpg",
+  "MHW CARD TZITZI.jpg",
+  "MHW CARD URAGAAN.jpg",
+  "MHW CARD VAAL.jpg",
+  "MHW CARD VELKHANA.jpg",
+  "MHW CARD VIPER TOBI.jpg",
+  "MHW CARD XENO.jpg",
+  "MHW CARD ZINOGRE.jpg",
+  "MHW CARD ZORAH.jpg"
 ];
 
 const monsterNames = {
@@ -109,78 +109,78 @@ const monsterNames = {
 };
 
 const printedCardNumbers = {
-  "MHW CARD A RATHALOS.png": "N24",
-  "MHW CARD ACIDIC GLAVENUS.png": "N49",
-  "MHW CARD ALATREON.png": "N69",
-  "MHW CARD ANCIENT LESHEN.png": "N36",
-  "MHW CARD ANJA.png": "N7",
-  "MHW CARD B.DIABLOS.png": "N25",
-  "MHW CARD BANBARO.png": "N38",
-  "MHW CARD BARIOTH.png": "N42",
-  "MHW CARD BARROTH.png": "N4",
-  "MHW CARD BAZEL.png": "N21",
-  "MHW CARD BEHEMOTH.png": "N34",
-  "MHW CARD BEOTODUS.png": "N37",
-  "MHW CARD BLACKVEIL VAAL.png": "N53",
-  "MHW CARD BRACHYDIOS.png": "N46",
-  "MHW CARD BRUTE TIGREX.png": "N61",
-  "MHW CARD CORAL PUKEI.png": "N41",
-  "MHW CARD DEVILJHO.png": "N31",
-  "MHW CARD DIABLOS.png": "N16",
-  "MHW CARD DODOGAMA.png": "N19",
-  "MHW CARD EBONY ODOGARON.png": "N50",
-  "MHW CARD FATALIS.png": "N71",
-  "MHW CARD FROSTFANG BARIOTH.png": "N70",
-  "MHW CARD FULGUR ANJA.png": "N48",
-  "MHW CARD FURIOUS RAJANG.png": "N67",
-  "MHW CARD GARUGA.png": "N59",
-  "MHW CARD GIRROS.png": "N11",
-  "MHW CARD GLAVENUS.png": "N44",
-  "MHW CARD GOLD RATHIAN.png": "N62",
-  "MHW CARD JAGRAS.png": "N1",
-  "MHW CARD JYURATODUS.png": "N5",
-  "MHW CARD KIRIN.png": "N17",
-  "MHW CARD KULU.png": "N2",
-  "MHW CARD KULVE TAROTH 2.png": "N32",
-  "MHW CARD KUSHALA.png": "N28",
-  "MHW CARD LAVASIOTH.png": "N22",
-  "MHW CARD LEGIANA.png": "N13",
-  "MHW CARD LESHEN.png": "N35",
-  "MHW CARD LUNASTRA.png": "N33",
-  "MHW CARD NAMIELLE.png": "N54",
-  "MHW CARD NERGIGANTE.png": "N26",
-  "MHW CARD NIGHT PAOLUMU.png": "N40",
-  "MHW CARD NARGA.png": "N43",
-  "MHW CARD ODOGARON.png": "N14",
-  "MHW CARD P RATHIAN.png": "N20",
-  "MHW CARD PAOLUMU.png": "N10",
-  "MHW CARD PUKEI.png": "N3",
-  "MHW CARD RADOBAAN.png": "N12",
-  "MHW CARD RAGING BRACHY.png": "N68",
-  "MHW CARD RAJANG.png": "N64",
-  "MHW CARD RATHIAN.png": "N8",
-  "MHW CARD RATHALOS.png": "N15",
-  "MHW CARD RUINER NERG.png": "N56",
-  "MHW CARD SAFIJIIVA.png": "N66",
-  "MHW CARD SAVAGE JHO.png": "N55",
-  "MHW CARD SCARRED GARUGA.png": "N60",
-  "MHW CARD SEETHING BAZEL.png": "N52",
-  "MHW CARD SHARA 1.png": "N57",
-  "MHW CARD SHRIEKING LEGIANA.png": "N47",
-  "MHW CARD SILVER RATHALOS.png": "N63",
-  "MHW CARD STYGIAN ZINOGRE.png": "N65",
-  "MHW CARD TEOSTRA.png": "N27",
-  "MHW CARD TIGREX.png": "N45",
-  "MHW CARD TOBI.png": "N6",
-  "MHW CARD TRUE SHARA.png": "N57",
-  "MHW CARD TZITZI.png": "N9",
-  "MHW CARD URAGAAN.png": "N23",
-  "MHW CARD VAAL.png": "N29",
-  "MHW CARD VELKHANA.png": "N51",
-  "MHW CARD VIPER TOBI.png": "N39",
-  "MHW CARD XENO.png": "N30",
-  "MHW CARD ZORAH.png": "N18",
-  "MHW CARD ZINOGRE.png": "N58"
+  "MHW CARD A RATHALOS.jpg": "N24",
+  "MHW CARD ACIDIC GLAVENUS.jpg": "N49",
+  "MHW CARD ALATREON.jpg": "N69",
+  "MHW CARD ANCIENT LESHEN.jpg": "N36",
+  "MHW CARD ANJA.jpg": "N7",
+  "MHW CARD B.DIABLOS.jpg": "N25",
+  "MHW CARD BANBARO.jpg": "N38",
+  "MHW CARD BARIOTH.jpg": "N42",
+  "MHW CARD BARROTH.jpg": "N4",
+  "MHW CARD BAZEL.jpg": "N21",
+  "MHW CARD BEHEMOTH.jpg": "N34",
+  "MHW CARD BEOTODUS.jpg": "N37",
+  "MHW CARD BLACKVEIL VAAL.jpg": "N53",
+  "MHW CARD BRACHYDIOS.jpg": "N46",
+  "MHW CARD BRUTE TIGREX.jpg": "N61",
+  "MHW CARD CORAL PUKEI.jpg": "N41",
+  "MHW CARD DEVILJHO.jpg": "N31",
+  "MHW CARD DIABLOS.jpg": "N16",
+  "MHW CARD DODOGAMA.jpg": "N19",
+  "MHW CARD EBONY ODOGARON.jpg": "N50",
+  "MHW CARD FATALIS.jpg": "N71",
+  "MHW CARD FROSTFANG BARIOTH.jpg": "N70",
+  "MHW CARD FULGUR ANJA.jpg": "N48",
+  "MHW CARD FURIOUS RAJANG.jpg": "N67",
+  "MHW CARD GARUGA.jpg": "N59",
+  "MHW CARD GIRROS.jpg": "N11",
+  "MHW CARD GLAVENUS.jpg": "N44",
+  "MHW CARD GOLD RATHIAN.jpg": "N62",
+  "MHW CARD JAGRAS.jpg": "N1",
+  "MHW CARD JYURATODUS.jpg": "N5",
+  "MHW CARD KIRIN.jpg": "N17",
+  "MHW CARD KULU.jpg": "N2",
+  "MHW CARD KULVE TAROTH 2.jpg": "N32",
+  "MHW CARD KUSHALA.jpg": "N28",
+  "MHW CARD LAVASIOTH.jpg": "N22",
+  "MHW CARD LEGIANA.jpg": "N13",
+  "MHW CARD LESHEN.jpg": "N35",
+  "MHW CARD LUNASTRA.jpg": "N33",
+  "MHW CARD NAMIELLE.jpg": "N54",
+  "MHW CARD NERGIGANTE.jpg": "N26",
+  "MHW CARD NIGHT PAOLUMU.jpg": "N40",
+  "MHW CARD NARGA.jpg": "N43",
+  "MHW CARD ODOGARON.jpg": "N14",
+  "MHW CARD P RATHIAN.jpg": "N20",
+  "MHW CARD PAOLUMU.jpg": "N10",
+  "MHW CARD PUKEI.jpg": "N3",
+  "MHW CARD RADOBAAN.jpg": "N12",
+  "MHW CARD RAGING BRACHY.jpg": "N68",
+  "MHW CARD RAJANG.jpg": "N64",
+  "MHW CARD RATHIAN.jpg": "N8",
+  "MHW CARD RATHALOS.jpg": "N15",
+  "MHW CARD RUINER NERG.jpg": "N56",
+  "MHW CARD SAFIJIIVA.jpg": "N66",
+  "MHW CARD SAVAGE JHO.jpg": "N55",
+  "MHW CARD SCARRED GARUGA.jpg": "N60",
+  "MHW CARD SEETHING BAZEL.jpg": "N52",
+  "MHW CARD SHARA 1.jpg": "N57",
+  "MHW CARD SHRIEKING LEGIANA.jpg": "N47",
+  "MHW CARD SILVER RATHALOS.jpg": "N63",
+  "MHW CARD STYGIAN ZINOGRE.jpg": "N65",
+  "MHW CARD TEOSTRA.jpg": "N27",
+  "MHW CARD TIGREX.jpg": "N45",
+  "MHW CARD TOBI.jpg": "N6",
+  "MHW CARD TRUE SHARA.jpg": "N57",
+  "MHW CARD TZITZI.jpg": "N9",
+  "MHW CARD URAGAAN.jpg": "N23",
+  "MHW CARD VAAL.jpg": "N29",
+  "MHW CARD VELKHANA.jpg": "N51",
+  "MHW CARD VIPER TOBI.jpg": "N39",
+  "MHW CARD XENO.jpg": "N30",
+  "MHW CARD ZORAH.jpg": "N18",
+  "MHW CARD ZINOGRE.jpg": "N58"
 };
 
 function getNumericCardNumber(numberCode) {
@@ -193,7 +193,7 @@ const allCards = cardFiles
   .map((file) => {
     const cleanName = file
       .replace(/^MHW CARD\s+/i, "")
-      .replace(/\.png$/i, "")
+      .replace(/\.jpg$/i, "")
       .replace(/\s+/g, " ")
       .trim();
     const monsterName = monsterNames[cleanName] || cleanName;
@@ -267,9 +267,9 @@ let dragStartX = 0;
 let dragStartY = 0;
 let dragOffsetX = 0;
 let dragAxis = "";
-let dragStartScroll = 0;
 let dragStartTime = 0;
 let dragStartIndex = 0;
+let dragCommitBase = 0;
 let swallowNextStageClick = false;
 
 function getVisibleCards() {
@@ -372,7 +372,10 @@ function centreOffsetFor(index) {
 // rounding a good guess, but only a guess: at either end the scroll range runs
 // out before the guess does, so check the neighbours and take the real winner.
 function indexNearestCentre() {
-  const target = filmstrip.scrollLeft + filmstrip.clientWidth / 2;
+  return indexNearestTo(filmstrip.scrollLeft + filmstrip.clientWidth / 2);
+}
+
+function indexNearestTo(target) {
   const guess = Math.round((target - itemCentres[0]) / filmstripStep);
   let best = Math.min(Math.max(guess, 0), itemCentres.length - 1);
 
@@ -388,12 +391,15 @@ function indexNearestCentre() {
   return best;
 }
 
-function scrollFilmstripTo(index, behavior) {
+function scrollFilmstripTo(index) {
   if (!filmstripItems[index]) {
     return;
   }
 
-  filmstrip.scrollTo({ left: centreOffsetFor(index), behavior });
+  // Straight there. The card cuts to the next one the way a phone gallery
+  // does; nothing slides or eases on the way.
+  filmstrip.scrollLeft = centreOffsetFor(index);
+  updateTrack();
 }
 
 // Cheap enough to run on every frame of a fling: the highlight and the caption.
@@ -429,35 +435,33 @@ function renderSlots(centre) {
       image.alt = index === centre ? `${card.name} card` : "";
     }
   });
+
+  // Fetch one further out in both directions, so the next card to slide in is
+  // already decoded and cannot hitch the settle as it arrives.
+  [centre - 2, centre + 2].forEach((index) => {
+    if (viewerCards[index]) {
+      new Image().src = viewerCards[index].image;
+    }
+  });
 }
 
 // The whole point: the row's position comes from the filmstrip's scroll
 // position, so dragging the strip moves the cards with it, one to one.
+// The scroll position decides which card is current and nothing else. It used
+// to position the row as well, so scrolling the strip dragged the main card
+// along with it; now the card holds still and is simply replaced once a
+// different thumbnail is the nearest one to the middle.
 function updateTrack() {
   if (!itemCentres.length) {
     return;
   }
 
-  // Interpolate against the measured thumbnail centres rather than assuming a
-  // uniform step, so the row lines up exactly with whatever the strip is
-  // showing and shares its idea of which card is centred.
   const centre = indexNearestCentre();
-  const target = filmstrip.scrollLeft + filmstrip.clientWidth / 2;
-  const drift = target - itemCentres[centre];
-  const neighbour = itemCentres[centre + Math.sign(drift)];
-  // Math.sign(0) is 0, which would make the card its own neighbour and divide
-  // by a zero span.
-  const span =
-    !drift || neighbour === undefined
-      ? filmstripStep
-      : Math.abs(neighbour - itemCentres[centre]);
 
   if (centre !== viewerIndex) {
     markActive(centre);
     renderSlots(centre);
   }
-
-  modalTrack.style.setProperty("--track-x", `${(-drift / span) * slotStride()}px`);
 }
 
 // Distance between slot centres: one card plus the gap between them.
@@ -465,12 +469,12 @@ function slotStride() {
   return modalSlots[0].offsetWidth + parseFloat(getComputedStyle(modalTrack).columnGap || 0);
 }
 
-function showCardAt(index, { scrollStrip = true, behavior = "smooth" } = {}) {
+function showCardAt(index, { scrollStrip = true } = {}) {
   markActive(index);
   renderSlots(index);
 
   if (scrollStrip) {
-    scrollFilmstripTo(index, behavior);
+    scrollFilmstripTo(index);
   } else {
     updateTrack();
   }
@@ -496,7 +500,7 @@ function openCardModal(card) {
   cardModal.classList.remove("hidden");
   document.body.classList.add("modal-open");
   buildFilmstrip();
-  showCardAt(startIndex, { behavior: "auto" });
+  showCardAt(startIndex);
   modalClose.focus();
 }
 
@@ -549,7 +553,7 @@ function settleToNearestCard() {
   // The settle scrolls too, which lands us back here; without this it would
   // chase its own tail forever.
   if (Math.abs(filmstrip.scrollLeft - centreOffsetFor(index)) > 2) {
-    scrollFilmstripTo(index, "smooth");
+    scrollFilmstripTo(index);
   }
 }
 
@@ -608,7 +612,7 @@ new ResizeObserver(() => {
   }
 
   measureFilmstrip();
-  scrollFilmstripTo(viewerIndex, "auto");
+  scrollFilmstripTo(viewerIndex);
 }).observe(filmstrip);
 
 /* --- Drag / swipe on the card -------------------------------------------- */
@@ -618,10 +622,10 @@ modalStage.addEventListener("pointerdown", (event) => {
     return;
   }
 
+  dragCommitBase = 0;
   dragPointerId = event.pointerId;
   dragStartX = event.clientX;
   dragStartY = event.clientY;
-  dragStartScroll = filmstrip.scrollLeft;
   dragStartTime = event.timeStamp;
   dragStartIndex = viewerIndex;
   dragOffsetX = 0;
@@ -650,11 +654,30 @@ modalStage.addEventListener("pointermove", (event) => {
   event.preventDefault();
   dragOffsetX = deltaX;
 
-  // Drive the strip rather than the card. The card is positioned from the
-  // strip every frame, so moving one moves the other and they cannot disagree.
-  // A card's width of drag is one thumbnail's width of scroll.
-  filmstrip.scrollLeft = dragStartScroll - deltaX * (filmstripStep / slotStride());
+  const threshold = slotStride() * COMMIT_FRACTION;
+  let since = deltaX - dragCommitBase;
+
+  // Past the threshold the drag hands over to the next card there and then,
+  // mid-gesture, and the gesture re-bases so a long drag can keep stepping.
+  // The card is therefore always on its way to a card, never parked between
+  // two of them, so lifting a finger has nothing left to correct.
+  while (Math.abs(since) >= threshold) {
+    const direction = since < 0 ? 1 : -1;
+    const next = Math.min(Math.max(viewerIndex + direction, 0), viewerCards.length - 1);
+
+    if (next === viewerIndex) {
+      break; // at one end; let it lean instead of stepping
+    }
+
+    dragCommitBase += direction * -threshold;
+    since = deltaX - dragCommitBase;
+    showCardAt(next);
+  }
+
 });
+
+// How far you drag before the card hands over to the next one.
+const COMMIT_FRACTION = 0.3;
 
 function endDrag(event) {
   if (dragPointerId !== event.pointerId) {
@@ -663,36 +686,11 @@ function endDrag(event) {
 
   // A drag that ends off the card still fires a click on the stage. Without
   // this the viewer would close every time you swiped past the card's edge.
-  const wasDragging = dragAxis === "x";
   swallowNextStageClick = dragAxis !== "";
   dragPointerId = null;
   dragAxis = "";
-
-  if (!wasDragging) {
-    return;
-  }
-
-  // A short fast flick should still change card even though it never dragged
-  // far enough to carry the next one into the middle. It has to be short as
-  // well as fast, and counted from where the drag started — a long fast drag
-  // has already moved the row, and adding a card on top would overshoot.
-  const elapsed = event.timeStamp - dragStartTime;
-  const distance = Math.abs(dragOffsetX);
-  const flicked = elapsed < 250 && distance > 30 && distance < slotStride() * 0.5;
-
-  // A flick asks for the next card; anything else glides to whichever card it
-  // was left nearest, which the scroll handler takes care of once the strip
-  // stops moving.
-  if (flicked) {
-    scrollFilmstripTo(
-      Math.min(Math.max(dragStartIndex + (dragOffsetX < 0 ? 1 : -1), 0), viewerCards.length - 1),
-      "smooth"
-    );
-  } else {
-    settleToNearestCard();
-  }
-
   dragOffsetX = 0;
+  dragCommitBase = 0;
 }
 
 modalStage.addEventListener("pointerup", endDrag);

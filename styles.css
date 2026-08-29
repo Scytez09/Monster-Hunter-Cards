@@ -596,9 +596,9 @@ input {
 }
 
 /* The current card and its two neighbours sit on one row. The row's position
-   is derived from the filmstrip's scroll position every frame, so the card
-   moves with the strip instead of cutting between cards. Nothing here is
-   transitioned: the movement IS the scroll position. */
+   never moves. The scroll position of the filmstrip only chooses which card
+   is in the middle; the row itself is fixed, so nothing slides when the strip
+   is dragged. */
 .modal-track {
   display: flex;
   align-items: center;
@@ -608,7 +608,6 @@ input {
      shrinks to fit and its contents spill to one side instead of keeping the
      middle card centred. */
   flex: 0 0 auto;
-  transform: translate3d(var(--track-x, 0px), 0, 0);
   animation: modal-card-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
