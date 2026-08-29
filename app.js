@@ -227,9 +227,9 @@ const collectionTitle = document.querySelector(".search-header h2");
 const installButton = document.getElementById("install-button");
 const cardModal = document.getElementById("card-modal");
 const modalStage = document.getElementById("modal-stage");
-const modalCard = document.getElementById("modal-card");
+const modalTrack = document.getElementById("modal-track");
+const modalSlots = [...document.querySelectorAll(".modal-slot")];
 const modalImage = document.getElementById("modal-image");
-const incomingImage = document.getElementById("modal-image-incoming");
 const filmstrip = document.getElementById("filmstrip");
 const filmstripCaption = document.getElementById("filmstrip-caption");
 const modalClose = document.getElementById("modal-close");
@@ -256,12 +256,9 @@ let viewerIndex = -1;
 let filmstripItems = [];
 let itemCentres = [];
 let filmstripStep = 1;
-let isAutoScrolling = false;
-let autoScrollTimer = 0;
-let settleTimer = 0;
 let scrollFrame = 0;
-let imageGeneration = 0;
 let wheelSettleTimer = 0;
+let scrubEndTimer = 0;
 
 // Drag gesture state.
 let dragPointerId = null;
@@ -269,6 +266,9 @@ let dragStartX = 0;
 let dragStartY = 0;
 let dragOffsetX = 0;
 let dragAxis = "";
+let dragStartScroll = 0;
+let dragStartTime = 0;
+let dragStartIndex = 0;
 let swallowNextStageClick = false;
 
 function getVisibleCards() {
@@ -355,7 +355,30 @@ function buildFilmstrip() {
 // changes size — a rotated phone moves every one of these.
 function measureFilmstrip() {
   itemCentres = filmstripItems.map((item) => item.offsetLeft + item.offsetWidth / 2);
-  filmstripStep = itemCentres.length > 1 ? itemCentres[1] - itemCentres[0] : 1;
+  // Averaged over the whole strip rather than taken from one adjacent pair:
+  // offsetLeft is rounded to whole pixels, and that error compounds.
+  filmstripStep =
+    itemCentres.length > 1
+      ? (itemCentres[itemCentres.length - 1] - itemCentres[0]) / (itemCentres.length - 1)
+      : 1;
+}
+
+// Snapping is suspended while a gesture is driving the scroll, then restored
+// so the strip settles onto a card by itself.
+function setScrubbing(on) {
+  filmstrip.classList.toggle("is-scrubbing", on);
+
+  if (!on) {
+    return;
+  }
+
+  clearTimeout(scrubEndTimer);
+}
+
+function settleFilmstrip(index) {
+  scrollFilmstripTo(index, "smooth");
+  clearTimeout(scrubEndTimer);
+  scrubEndTimer = setTimeout(() => filmstrip.classList.remove("is-scrubbing"), 450);
 }
 
 function centreOffsetFor(index) {
@@ -387,19 +410,10 @@ function scrollFilmstripTo(index, behavior) {
     return;
   }
 
-  isAutoScrolling = true;
   filmstrip.scrollTo({ left: centreOffsetFor(index), behavior });
-
-  // Let the smooth scroll finish before trusting scroll events again, so the
-  // strip driving the card and the card driving the strip can't ping-pong.
-  clearTimeout(autoScrollTimer);
-  autoScrollTimer = setTimeout(() => {
-    isAutoScrolling = false;
-  }, behavior === "smooth" ? 420 : 60);
 }
 
-// Only the parts that are cheap on every frame of a fling: the highlight and
-// the caption. The full-size image is swapped separately, once things settle.
+// Cheap enough to run on every frame of a fling: the highlight and the caption.
 function markActive(index) {
   if (index === viewerIndex || !viewerCards[index]) {
     return;
@@ -413,73 +427,69 @@ function markActive(index) {
     `${viewerCards[index].name}  ·  ${viewerCards[index].numberCode || "—"}`;
 }
 
-async function syncViewerImage(direction = "") {
-  const card = viewerCards[viewerIndex];
+// Fill the three slots with the current card and its neighbours. Only the src
+// changes, so the images already on screen are never re-decoded.
+function renderSlots(centre) {
+  modalSlots.forEach((slot) => {
+    const index = centre + Number(slot.dataset.offset);
+    const card = viewerCards[index];
+    const image = slot.querySelector("img");
 
-  if (!card || modalImage.dataset.cardId === card.id) {
-    return;
-  }
+    slot.classList.toggle("is-current", index === centre);
+    // The ends have no neighbour on one side; leave that slot empty rather
+    // than wrapping to a card the strip cannot scroll to.
+    slot.style.visibility = card ? "visible" : "hidden";
 
-  modalImage.dataset.cardId = card.id;
-
-  if (direction) {
-    modalCard.classList.remove("swipe-next", "swipe-previous");
-    void modalCard.offsetWidth;
-    modalCard.classList.add(direction === "next" ? "swipe-next" : "swipe-previous");
-  }
-
-  // The first card has nothing to fade from.
-  if (!modalImage.src) {
-    modalImage.src = card.image;
-    modalImage.alt = `${card.name} card`;
-  } else {
-    const generation = (imageGeneration += 1);
-    incomingImage.src = card.image;
-
-    // Decode before fading, so a card that hasn't been fetched yet holds the
-    // previous one on screen instead of flashing through an empty frame.
-    try {
-      await incomingImage.decode();
-    } catch {
-      // A src replaced mid-decode rejects; the generation check below drops it.
-    }
-
-    if (generation !== imageGeneration || modalImage.dataset.cardId !== card.id) {
-      return;
-    }
-
-    incomingImage.classList.add("is-visible");
-    await new Promise((resolve) => setTimeout(resolve, 190));
-
-    if (generation !== imageGeneration) {
-      return;
-    }
-
-    // Promote the faded-in layer to the base one, then hide the overlay without
-    // animating it back out — same pixels, so the handover is invisible.
-    modalImage.src = card.image;
-    modalImage.alt = `${card.name} card`;
-    incomingImage.style.transition = "none";
-    incomingImage.classList.remove("is-visible");
-    void incomingImage.offsetWidth;
-    incomingImage.style.transition = "";
-  }
-
-  // Warm the neighbours so an arrow press or a swipe lands on a decoded image.
-  [viewerIndex - 1, viewerIndex + 1].forEach((neighbour) => {
-    const wrapped = viewerCards[(neighbour + viewerCards.length) % viewerCards.length];
-    if (wrapped) {
-      new Image().src = wrapped.image;
+    if (card && image.dataset.cardId !== card.id) {
+      image.dataset.cardId = card.id;
+      image.src = card.image;
+      image.alt = index === centre ? `${card.name} card` : "";
     }
   });
 }
 
-function showCardAt(index, { direction = "", scrollStrip = true, behavior = "smooth" } = {}) {
+// The whole point: the row's position comes from the filmstrip's scroll
+// position, so dragging the strip moves the cards with it, one to one.
+function updateTrack() {
+  if (!itemCentres.length) {
+    return;
+  }
+
+  // Interpolate against the measured thumbnail centres rather than assuming a
+  // uniform step, so the row lines up exactly with whatever the strip is
+  // showing and shares its idea of which card is centred.
+  const centre = indexNearestCentre();
+  const target = filmstrip.scrollLeft + filmstrip.clientWidth / 2;
+  const drift = target - itemCentres[centre];
+  const neighbour = itemCentres[centre + Math.sign(drift)];
+  // Math.sign(0) is 0, which would make the card its own neighbour and divide
+  // by a zero span.
+  const span =
+    !drift || neighbour === undefined
+      ? filmstripStep
+      : Math.abs(neighbour - itemCentres[centre]);
+
+  if (centre !== viewerIndex) {
+    markActive(centre);
+    renderSlots(centre);
+  }
+
+  modalTrack.style.setProperty("--track-x", `${(-drift / span) * slotStride()}px`);
+}
+
+// Distance between slot centres: one card plus the gap between them.
+function slotStride() {
+  return modalSlots[0].offsetWidth + parseFloat(getComputedStyle(modalTrack).columnGap || 0);
+}
+
+function showCardAt(index, { scrollStrip = true, behavior = "smooth" } = {}) {
   markActive(index);
-  syncViewerImage(direction);
+  renderSlots(index);
 
   if (scrollStrip) {
     scrollFilmstripTo(index, behavior);
+  } else {
+    updateTrack();
   }
 }
 
@@ -488,8 +498,10 @@ function moveModalCard(direction) {
     return;
   }
 
-  const nextIndex = (viewerIndex + direction + viewerCards.length) % viewerCards.length;
-  showCardAt(nextIndex, { direction: direction > 0 ? "next" : "previous" });
+  // Clamped rather than wrapped: the filmstrip is a line with two ends, and
+  // jumping from one end to the other would fling it the whole way across.
+  const nextIndex = Math.min(Math.max(viewerIndex + direction, 0), viewerCards.length - 1);
+  showCardAt(nextIndex);
 }
 
 function openCardModal(card) {
@@ -507,11 +519,11 @@ function openCardModal(card) {
 
 function closeCardModal() {
   cardModal.classList.add("hidden");
-  imageGeneration += 1; // strands any crossfade still waiting on a decode
-  modalImage.src = "";
-  delete modalImage.dataset.cardId;
-  incomingImage.classList.remove("is-visible");
-  incomingImage.removeAttribute("src");
+  modalSlots.forEach((slot) => {
+    const image = slot.querySelector("img");
+    image.removeAttribute("src");
+    delete image.dataset.cardId;
+  });
   filmstrip.innerHTML = "";
   filmstripItems = [];
   modalCardId = null;
@@ -524,23 +536,19 @@ function closeCardModal() {
 
 // Native scrolling does the momentum and the rubber-banding; we only translate
 // where it ended up into an index.
+// Every scroll drives the card row, whoever caused it — a finger on the strip,
+// a finger on the card, the wheel, or a smooth scroll from the arrows.
 filmstrip.addEventListener("scroll", () => {
-  if (isAutoScrolling || !filmstripItems.length) {
+  if (!filmstripItems.length) {
     return;
   }
 
   if (!scrollFrame) {
     scrollFrame = requestAnimationFrame(() => {
       scrollFrame = 0;
-      markActive(indexNearestCentre());
+      updateTrack();
     });
   }
-
-  // The card follows the strip as you scrub rather than waiting for it to
-  // stop. The delay only coalesces the thumbnails flicked past within a single
-  // frame or two; the crossfade itself waits for the image to decode.
-  clearTimeout(settleTimer);
-  settleTimer = setTimeout(syncViewerImage, 40);
 });
 
 /* --- Wheel ---------------------------------------------------------------- */
@@ -565,14 +573,13 @@ cardModal.addEventListener(
     }
 
     event.preventDefault();
-    isAutoScrolling = false;
-    clearTimeout(autoScrollTimer);
+    setScrubbing(true);
     filmstrip.scrollLeft += delta * WHEEL_TO_STRIP;
 
     // Nothing snaps a scroll driven by assignment, so settle it by hand once
     // the wheel goes quiet.
     clearTimeout(wheelSettleTimer);
-    wheelSettleTimer = setTimeout(() => scrollFilmstripTo(indexNearestCentre(), "smooth"), 120);
+    wheelSettleTimer = setTimeout(() => settleFilmstrip(indexNearestCentre()), 120);
   },
   { passive: false }
 );
@@ -599,22 +606,18 @@ new ResizeObserver(() => {
 /* --- Drag / swipe on the card -------------------------------------------- */
 
 function resetCardTransform() {
-  modalCard.classList.remove("is-dragging");
-  modalCard.style.setProperty("--drag-x", "0px");
-  modalCard.style.setProperty("--drag-tilt", "0deg");
-  modalCard.style.setProperty("--tilt-x", "0deg");
-  modalCard.style.setProperty("--tilt-y", "0deg");
-  modalCard.style.removeProperty("--drag-fade");
+  modalTrack.style.setProperty("--tilt-x", "0deg");
+  modalTrack.style.setProperty("--tilt-y", "0deg");
 }
 
-// Mouse-only flourish: the card leans towards the cursor.
+// Mouse-only flourish: the row leans towards the cursor.
 function tiltToPointer(event) {
-  const bounds = modalCard.getBoundingClientRect();
+  const bounds = modalStage.getBoundingClientRect();
   const horizontal = (event.clientX - bounds.left) / bounds.width;
   const vertical = (event.clientY - bounds.top) / bounds.height;
 
-  modalCard.style.setProperty("--tilt-y", `${(horizontal - 0.5) * 18}deg`);
-  modalCard.style.setProperty("--tilt-x", `${(0.5 - vertical) * 18}deg`);
+  modalTrack.style.setProperty("--tilt-y", `${(horizontal - 0.5) * 12}deg`);
+  modalTrack.style.setProperty("--tilt-x", `${(0.5 - vertical) * 12}deg`);
 }
 
 modalStage.addEventListener("pointerdown", (event) => {
@@ -625,9 +628,11 @@ modalStage.addEventListener("pointerdown", (event) => {
   dragPointerId = event.pointerId;
   dragStartX = event.clientX;
   dragStartY = event.clientY;
+  dragStartScroll = filmstrip.scrollLeft;
+  dragStartTime = event.timeStamp;
+  dragStartIndex = viewerIndex;
   dragOffsetX = 0;
   dragAxis = "";
-  modalCard.classList.add("is-dragging");
   modalStage.setPointerCapture(event.pointerId);
 });
 
@@ -654,11 +659,12 @@ modalStage.addEventListener("pointermove", (event) => {
 
   event.preventDefault();
   dragOffsetX = deltaX;
+  setScrubbing(true);
 
-  const progress = Math.max(-1, Math.min(1, deltaX / modalStage.clientWidth));
-  modalCard.style.setProperty("--drag-x", `${deltaX}px`);
-  modalCard.style.setProperty("--drag-tilt", `${progress * -10}deg`);
-  modalCard.style.setProperty("--drag-fade", String(1 - Math.abs(progress) * 0.45));
+  // Drive the strip rather than the card. The card is positioned from the
+  // strip every frame, so moving one moves the other and they cannot disagree.
+  // A card's width of drag is one thumbnail's width of scroll.
+  filmstrip.scrollLeft = dragStartScroll - deltaX * (filmstripStep / slotStride());
 });
 
 function endDrag(event) {
@@ -666,20 +672,29 @@ function endDrag(event) {
     return;
   }
 
-  const threshold = Math.min(90, modalStage.clientWidth * 0.16);
-  const shouldAdvance = dragAxis === "x" && Math.abs(dragOffsetX) > threshold;
-
   // A drag that ends off the card still fires a click on the stage. Without
   // this the viewer would close every time you swiped past the card's edge.
+  const wasDragging = dragAxis === "x";
   swallowNextStageClick = dragAxis !== "";
   dragPointerId = null;
   dragAxis = "";
-  resetCardTransform();
 
-  if (shouldAdvance) {
-    moveModalCard(dragOffsetX < 0 ? 1 : -1);
+  if (!wasDragging) {
+    return;
   }
 
+  // A short fast flick should still change card even though it never dragged
+  // far enough to carry the next one into the middle. It has to be short as
+  // well as fast, and counted from where the drag started — a long fast drag
+  // has already moved the row, and adding a card on top would overshoot.
+  const elapsed = event.timeStamp - dragStartTime;
+  const distance = Math.abs(dragOffsetX);
+  const flicked = elapsed < 250 && distance > 30 && distance < slotStride() * 0.5;
+  const landing = flicked
+    ? Math.min(Math.max(dragStartIndex + (dragOffsetX < 0 ? 1 : -1), 0), viewerCards.length - 1)
+    : indexNearestCentre();
+
+  settleFilmstrip(landing);
   dragOffsetX = 0;
 }
 
