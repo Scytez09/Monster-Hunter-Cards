@@ -257,8 +257,6 @@ let filmstripItems = [];
 let itemCentres = [];
 let filmstripStep = 1;
 let scrollFrame = 0;
-let wheelSettleTimer = 0;
-let scrubEndTimer = 0;
 
 // Drag gesture state.
 let dragPointerId = null;
@@ -361,24 +359,6 @@ function measureFilmstrip() {
     itemCentres.length > 1
       ? (itemCentres[itemCentres.length - 1] - itemCentres[0]) / (itemCentres.length - 1)
       : 1;
-}
-
-// Snapping is suspended while a gesture is driving the scroll, then restored
-// so the strip settles onto a card by itself.
-function setScrubbing(on) {
-  filmstrip.classList.toggle("is-scrubbing", on);
-
-  if (!on) {
-    return;
-  }
-
-  clearTimeout(scrubEndTimer);
-}
-
-function settleFilmstrip(index) {
-  scrollFilmstripTo(index, "smooth");
-  clearTimeout(scrubEndTimer);
-  scrubEndTimer = setTimeout(() => filmstrip.classList.remove("is-scrubbing"), 450);
 }
 
 function centreOffsetFor(index) {
@@ -573,13 +553,7 @@ cardModal.addEventListener(
     }
 
     event.preventDefault();
-    setScrubbing(true);
     filmstrip.scrollLeft += delta * WHEEL_TO_STRIP;
-
-    // Nothing snaps a scroll driven by assignment, so settle it by hand once
-    // the wheel goes quiet.
-    clearTimeout(wheelSettleTimer);
-    wheelSettleTimer = setTimeout(() => settleFilmstrip(indexNearestCentre()), 120);
   },
   { passive: false }
 );
@@ -659,7 +633,6 @@ modalStage.addEventListener("pointermove", (event) => {
 
   event.preventDefault();
   dragOffsetX = deltaX;
-  setScrubbing(true);
 
   // Drive the strip rather than the card. The card is positioned from the
   // strip every frame, so moving one moves the other and they cannot disagree.
@@ -690,11 +663,16 @@ function endDrag(event) {
   const elapsed = event.timeStamp - dragStartTime;
   const distance = Math.abs(dragOffsetX);
   const flicked = elapsed < 250 && distance > 30 && distance < slotStride() * 0.5;
-  const landing = flicked
-    ? Math.min(Math.max(dragStartIndex + (dragOffsetX < 0 ? 1 : -1), 0), viewerCards.length - 1)
-    : indexNearestCentre();
 
-  settleFilmstrip(landing);
+  // Only a flick moves on its own — it is a request for the next card. A drag
+  // is left exactly where it was let go.
+  if (flicked) {
+    scrollFilmstripTo(
+      Math.min(Math.max(dragStartIndex + (dragOffsetX < 0 ? 1 : -1), 0), viewerCards.length - 1),
+      "smooth"
+    );
+  }
+
   dragOffsetX = 0;
 }
 

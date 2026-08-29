@@ -684,16 +684,11 @@ input {
   padding: 0.5rem calc(50% - 1.65rem);
   overflow-x: auto;
   overscroll-behavior-x: contain;
-  scroll-snap-type: x mandatory;
-}
-
-/* Snap has to be off while a drag or the wheel is driving the scroll by hand:
-   mandatory snapping yanks every assignment to the nearest thumbnail, so the
-   card row jumps between cards instead of gliding with the gesture. */
-.filmstrip.is-scrubbing {
-  scroll-snap-type: none;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+  /* Deliberately no scroll-snap. Scrolling rests wherever it is let go; the
+     card nearest the middle is the current one. Jumping to a particular card
+     is what the arrows and the thumbnails are for. */
 }
 
 .filmstrip::-webkit-scrollbar {
@@ -715,7 +710,6 @@ input {
   background: #0b1b2b;
   overflow: hidden;
   cursor: pointer;
-  scroll-snap-align: center;
   opacity: 0.42;
   filter: saturate(0.55);
   transform: scale(0.88);
