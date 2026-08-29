@@ -1,4 +1,4 @@
-const CACHE_NAME = "monster-hunter-atlas-v2";
+const CACHE_NAME = "monster-hunter-atlas-v3";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -38,20 +38,34 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
+  // Card art never changes once published, so serve it from the cache and only
+  // hit the network the first time.
+  if (url.pathname.includes("/cards/")) {
+    event.respondWith(
+      caches.match(event.request).then((cached) => cached || fetchAndCache(event.request))
+    );
+    return;
+  }
 
-      return fetch(event.request)
-        .then((networkResponse) => {
-          const responseClone = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
-          return networkResponse;
-        })
-        .catch(() => caches.match("./index.html"));
-    })
+  // Everything else is the app itself. Network first, so a deploy shows up on
+  // the next load instead of living in the cache forever; the cache is only
+  // the offline fallback.
+  event.respondWith(
+    // cache: "no-cache" revalidates with the server (a cheap 304 when nothing
+    // changed) so the browser's own HTTP cache can't hand back a stale file.
+    fetchAndCache(new Request(event.request, { cache: "no-cache" }))
+      .catch(() =>
+        caches.match(event.request).then((cached) => cached || caches.match("./index.html"))
+      )
   );
 });
 
+function fetchAndCache(request) {
+  return fetch(request).then((response) => {
+    if (response.ok) {
+      const copy = response.clone();
+      caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+    }
+    return response;
+  });
+}
