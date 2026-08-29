@@ -222,10 +222,16 @@ const filterSelect = document.getElementById("filter-select");
 const sortSelect = document.getElementById("sort-select");
 const collectionToggle = document.getElementById("collection-toggle");
 const collectionPanel = document.getElementById("collection-panel");
+const menuBackdrop = document.getElementById("menu-backdrop");
 const collectionTitle = document.querySelector(".search-header h2");
 const installButton = document.getElementById("install-button");
 const cardModal = document.getElementById("card-modal");
+const modalStage = document.getElementById("modal-stage");
+const modalTrack = document.getElementById("modal-track");
+const modalSlots = [...document.querySelectorAll(".modal-slot")];
 const modalImage = document.getElementById("modal-image");
+const filmstrip = document.getElementById("filmstrip");
+const filmstripCaption = document.getElementById("filmstrip-caption");
 const modalClose = document.getElementById("modal-close");
 const modalPrevious = document.getElementById("modal-previous");
 const modalNext = document.getElementById("modal-next");
@@ -241,10 +247,30 @@ window.addEventListener("resize", updateTopbarHeight);
 let activeFilter = "all";
 let activeSort = "name";
 let deferredPrompt = null;
-let isPanningCard = false;
 let modalCardId = null;
-let touchStartX = 0;
-let touchStartY = 0;
+
+// Card viewer state: the snapshot being browsed, where we are in it, and the
+// filmstrip geometry used to map scroll position to index.
+let viewerCards = [];
+let viewerIndex = -1;
+let filmstripItems = [];
+let itemCentres = [];
+let filmstripStep = 1;
+let scrollFrame = 0;
+let restTimer = 0;
+let wheelAccumulator = 0;
+let wheelResetTimer = 0;
+
+// Drag gesture state.
+let dragPointerId = null;
+let dragStartX = 0;
+let dragStartY = 0;
+let dragOffsetX = 0;
+let dragAxis = "";
+let dragStartScroll = 0;
+let dragStartTime = 0;
+let dragStartIndex = 0;
+let swallowNextStageClick = false;
 
 function getVisibleCards() {
   const query = searchInput.value.trim().toLowerCase();
@@ -272,7 +298,7 @@ function renderCards() {
     .map(
       (card) => `
         <article class="card-item" tabindex="0" aria-label="${card.name}">
-          <img src="${card.image}" alt="${card.name} card" data-card-id="${card.id}" />
+          <img src="${card.image}" alt="${card.name} card" data-card-id="${card.id}" loading="lazy" />
         </article>
       `
     )
@@ -286,10 +312,7 @@ function renderCards() {
         return;
       }
 
-      showModalCard(card);
-      cardModal.classList.remove("hidden");
-      document.body.classList.add("modal-open");
-      modalClose.focus();
+      openCardModal(card);
     };
 
     cardItem.addEventListener("click", openCard);
@@ -302,105 +325,390 @@ function renderCards() {
   });
 }
 
-function showModalCard(card, direction = "") {
-  modalCardId = card.id;
-  modalImage.src = card.image;
-  modalImage.alt = `${card.name} card`;
+/* ---------------------------------------------------------------------------
+   Card viewer
+   The viewer works off a snapshot of whatever the grid is showing, so the
+   filmstrip, the arrows and the swipe all walk the same list in the same order.
+   --------------------------------------------------------------------------- */
 
-  if (direction) {
-    modalImage.classList.remove("swipe-next", "swipe-previous");
-    void modalImage.offsetWidth;
-    modalImage.classList.add(direction === "next" ? "swipe-next" : "swipe-previous");
+// Wheel delta needed to move on by one card. A mouse notch is about 100, so
+// one notch is one card; a trackpad's smaller deltas add up.
+const WHEEL_STEP = 45;
+
+function buildFilmstrip() {
+  filmstrip.innerHTML = viewerCards
+    .map(
+      (card, index) => `
+        <button class="filmstrip-item" type="button" role="option" aria-selected="false"
+                data-index="${index}" tabindex="-1" aria-label="${card.name}">
+          <img src="${card.image}" alt="" loading="lazy" draggable="false" />
+        </button>
+      `
+    )
+    .join("");
+
+  filmstripItems = [...filmstrip.querySelectorAll(".filmstrip-item")];
+  measureFilmstrip();
+}
+
+// Where each thumbnail's centre sits along the strip's content. Measured once
+// per layout rather than per scroll event, and re-measured when the strip
+// changes size — a rotated phone moves every one of these.
+function measureFilmstrip() {
+  itemCentres = filmstripItems.map((item) => item.offsetLeft + item.offsetWidth / 2);
+  // Averaged over the whole strip rather than taken from one adjacent pair:
+  // offsetLeft is rounded to whole pixels, and that error compounds.
+  filmstripStep =
+    itemCentres.length > 1
+      ? (itemCentres[itemCentres.length - 1] - itemCentres[0]) / (itemCentres.length - 1)
+      : 1;
+}
+
+function centreOffsetFor(index) {
+  return itemCentres[index] - filmstrip.clientWidth / 2;
+}
+
+// Which thumbnail is nearest the middle of the strip. The even spacing makes
+// rounding a good guess, but only a guess: at either end the scroll range runs
+// out before the guess does, so check the neighbours and take the real winner.
+function indexNearestCentre() {
+  const target = filmstrip.scrollLeft + filmstrip.clientWidth / 2;
+  const guess = Math.round((target - itemCentres[0]) / filmstripStep);
+  let best = Math.min(Math.max(guess, 0), itemCentres.length - 1);
+
+  for (let candidate = best - 1; candidate <= best + 1; candidate += 1) {
+    if (
+      itemCentres[candidate] !== undefined &&
+      Math.abs(itemCentres[candidate] - target) < Math.abs(itemCentres[best] - target)
+    ) {
+      best = candidate;
+    }
+  }
+
+  return best;
+}
+
+function scrollFilmstripTo(index, behavior) {
+  if (!filmstripItems[index]) {
+    return;
+  }
+
+  filmstrip.scrollTo({ left: centreOffsetFor(index), behavior });
+}
+
+// Cheap enough to run on every frame of a fling: the highlight and the caption.
+function markActive(index) {
+  if (index === viewerIndex || !viewerCards[index]) {
+    return;
+  }
+
+  filmstripItems[viewerIndex]?.setAttribute("aria-selected", "false");
+  filmstripItems[index]?.setAttribute("aria-selected", "true");
+  viewerIndex = index;
+  modalCardId = viewerCards[index].id;
+  filmstripCaption.textContent =
+    `${viewerCards[index].name}  ·  ${viewerCards[index].numberCode || "—"}`;
+}
+
+// Fill the three slots with the current card and its neighbours. Only the src
+// changes, so the images already on screen are never re-decoded.
+function renderSlots(centre) {
+  modalSlots.forEach((slot) => {
+    const index = centre + Number(slot.dataset.offset);
+    const card = viewerCards[index];
+    const image = slot.querySelector("img");
+
+    slot.classList.toggle("is-current", index === centre);
+    // The ends have no neighbour on one side; leave that slot empty rather
+    // than wrapping to a card the strip cannot scroll to.
+    slot.style.visibility = card ? "visible" : "hidden";
+
+    if (card && image.dataset.cardId !== card.id) {
+      image.dataset.cardId = card.id;
+      image.src = card.image;
+      image.alt = index === centre ? `${card.name} card` : "";
+    }
+  });
+}
+
+// The whole point: the row's position comes from the filmstrip's scroll
+// position, so dragging the strip moves the cards with it, one to one.
+function updateTrack() {
+  if (!itemCentres.length) {
+    return;
+  }
+
+  // Interpolate against the measured thumbnail centres rather than assuming a
+  // uniform step, so the row lines up exactly with whatever the strip is
+  // showing and shares its idea of which card is centred.
+  const centre = indexNearestCentre();
+  const target = filmstrip.scrollLeft + filmstrip.clientWidth / 2;
+  const drift = target - itemCentres[centre];
+  const neighbour = itemCentres[centre + Math.sign(drift)];
+  // Math.sign(0) is 0, which would make the card its own neighbour and divide
+  // by a zero span.
+  const span =
+    !drift || neighbour === undefined
+      ? filmstripStep
+      : Math.abs(neighbour - itemCentres[centre]);
+
+  if (centre !== viewerIndex) {
+    markActive(centre);
+    renderSlots(centre);
+  }
+
+  modalTrack.style.setProperty("--track-x", `${(-drift / span) * slotStride()}px`);
+}
+
+// Distance between slot centres: one card plus the gap between them.
+function slotStride() {
+  return modalSlots[0].offsetWidth + parseFloat(getComputedStyle(modalTrack).columnGap || 0);
+}
+
+function showCardAt(index, { scrollStrip = true, behavior = "smooth" } = {}) {
+  markActive(index);
+  renderSlots(index);
+
+  if (scrollStrip) {
+    scrollFilmstripTo(index, behavior);
+  } else {
+    updateTrack();
   }
 }
 
 function moveModalCard(direction) {
-  const visibleCards = getVisibleCards();
-  const currentIndex = visibleCards.findIndex((card) => card.id === modalCardId);
-
-  if (currentIndex < 0 || visibleCards.length < 2) {
+  if (viewerCards.length < 2) {
     return;
   }
 
-  const nextIndex = (currentIndex + direction + visibleCards.length) % visibleCards.length;
-  showModalCard(visibleCards[nextIndex], direction > 0 ? "next" : "previous");
+  // Clamped rather than wrapped: the filmstrip is a line with two ends, and
+  // jumping from one end to the other would fling it the whole way across.
+  const nextIndex = Math.min(Math.max(viewerIndex + direction, 0), viewerCards.length - 1);
+  showCardAt(nextIndex);
+}
+
+function openCardModal(card) {
+  viewerCards = getVisibleCards();
+  viewerIndex = -1;
+
+  const startIndex = Math.max(0, viewerCards.findIndex((item) => item.id === card.id));
+
+  cardModal.classList.remove("hidden");
+  document.body.classList.add("modal-open");
+  buildFilmstrip();
+  showCardAt(startIndex, { behavior: "auto" });
+  modalClose.focus();
 }
 
 function closeCardModal() {
   cardModal.classList.add("hidden");
-  modalImage.src = "";
+  modalSlots.forEach((slot) => {
+    const image = slot.querySelector("img");
+    image.removeAttribute("src");
+    delete image.dataset.cardId;
+  });
+  filmstrip.innerHTML = "";
+  filmstripItems = [];
   modalCardId = null;
-  resetCardPerspective();
+  viewerIndex = -1;
   document.body.classList.remove("modal-open");
 }
 
-function updateCardPerspective(event) {
-  const bounds = modalImage.getBoundingClientRect();
-  const horizontal = (event.clientX - bounds.left) / bounds.width;
-  const vertical = (event.clientY - bounds.top) / bounds.height;
-  const rotateY = (horizontal - 0.5) * 24;
-  const rotateX = (0.5 - vertical) * 24;
+/* --- Filmstrip scrubbing -------------------------------------------------- */
 
-  modalImage.style.setProperty("--card-rotate-x", `${rotateX}deg`);
-  modalImage.style.setProperty("--card-rotate-y", `${rotateY}deg`);
-  modalImage.classList.add("is-panning");
-}
-
-function resetCardPerspective() {
-  modalImage.classList.remove("is-panning");
-  modalImage.style.setProperty("--card-rotate-x", "0deg");
-  modalImage.style.setProperty("--card-rotate-y", "0deg");
-}
-
-modalImage.addEventListener("pointermove", (event) => {
-  if (event.pointerType === "touch" && !isPanningCard) {
+// Native scrolling does the momentum and the rubber-banding; we only translate
+// where it ended up into an index.
+// Every scroll drives the card row, whoever caused it — a finger on the strip,
+// a finger on the card, the wheel, or a smooth scroll from the arrows.
+filmstrip.addEventListener("scroll", () => {
+  if (!filmstripItems.length) {
     return;
   }
 
-  updateCardPerspective(event);
-});
-
-modalImage.addEventListener("pointerdown", (event) => {
-  isPanningCard = true;
-  if (event.pointerType === "touch") {
-    touchStartX = event.clientX;
-    touchStartY = event.clientY;
+  if (!scrollFrame) {
+    scrollFrame = requestAnimationFrame(() => {
+      scrollFrame = 0;
+      updateTrack();
+    });
   }
-  modalImage.setPointerCapture(event.pointerId);
-  updateCardPerspective(event);
+
+  // Coming to rest between two cards looks broken, so once the scrolling
+  // stops the strip glides on to the nearest one. This is a soft, eased move
+  // rather than the hard jump CSS scroll-snap was making.
+  clearTimeout(restTimer);
+  restTimer = setTimeout(settleToNearestCard, 140);
 });
 
-modalImage.addEventListener("pointerup", (event) => {
-  if (event.pointerType === "touch") {
-    const horizontalDistance = event.clientX - touchStartX;
-    const verticalDistance = event.clientY - touchStartY;
+function settleToNearestCard() {
+  if (dragPointerId !== null || !itemCentres.length) {
+    return; // still under the finger
+  }
 
-    if (Math.abs(horizontalDistance) > 60 && Math.abs(horizontalDistance) > Math.abs(verticalDistance) * 1.3) {
-      moveModalCard(horizontalDistance < 0 ? 1 : -1);
+  const index = indexNearestCentre();
+
+  // The settle scrolls too, which lands us back here; without this it would
+  // chase its own tail forever.
+  if (Math.abs(filmstrip.scrollLeft - centreOffsetFor(index)) > 2) {
+    scrollFilmstripTo(index, "smooth");
+  }
+}
+
+/* --- Wheel ---------------------------------------------------------------- */
+
+// Chrome already turns a vertical wheel into horizontal movement over a strip
+// that only scrolls sideways, but it moves roughly a dozen cards per notch.
+// Taking the gesture over steps one card at a time instead, and because every
+// step lands on a card the wheel can never leave you stranded between two.
+cardModal.addEventListener(
+  "wheel",
+  (event) => {
+    if (viewerCards.length < 2) {
+      return;
     }
+
+    const delta =
+      Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+
+    if (!delta) {
+      return;
+    }
+
+    event.preventDefault();
+    wheelAccumulator += delta;
+
+    // A trackpad sends many small deltas where a mouse sends one big one, so
+    // accumulate and forget the remainder once the gesture stops.
+    clearTimeout(wheelResetTimer);
+    wheelResetTimer = setTimeout(() => {
+      wheelAccumulator = 0;
+    }, 200);
+
+    if (Math.abs(wheelAccumulator) >= WHEEL_STEP) {
+      const direction = Math.sign(wheelAccumulator);
+      wheelAccumulator = 0;
+      moveModalCard(direction);
+    }
+  },
+  { passive: false }
+);
+
+filmstrip.addEventListener("click", (event) => {
+  const item = event.target.closest(".filmstrip-item");
+
+  if (item) {
+    showCardAt(Number(item.dataset.index));
+  }
+});
+
+// A resize moves every thumbnail, so the cached centres have to be rebuilt and
+// the current card pulled back to the middle.
+new ResizeObserver(() => {
+  if (!filmstripItems.length) {
+    return;
   }
 
-  isPanningCard = false;
-  modalImage.releasePointerCapture(event.pointerId);
-  resetCardPerspective();
-});
+  measureFilmstrip();
+  scrollFilmstripTo(viewerIndex, "auto");
+}).observe(filmstrip);
 
-modalImage.addEventListener("pointercancel", () => {
-  isPanningCard = false;
-  resetCardPerspective();
-});
+/* --- Drag / swipe on the card -------------------------------------------- */
 
-modalImage.addEventListener("pointerleave", () => {
-  if (!isPanningCard) {
-    resetCardPerspective();
+modalStage.addEventListener("pointerdown", (event) => {
+  if (event.button > 0) {
+    return;
   }
+
+  dragPointerId = event.pointerId;
+  dragStartX = event.clientX;
+  dragStartY = event.clientY;
+  dragStartScroll = filmstrip.scrollLeft;
+  dragStartTime = event.timeStamp;
+  dragStartIndex = viewerIndex;
+  dragOffsetX = 0;
+  dragAxis = "";
+  modalStage.setPointerCapture(event.pointerId);
 });
+
+modalStage.addEventListener("pointermove", (event) => {
+  if (dragPointerId !== event.pointerId) {
+    return;
+  }
+
+  const deltaX = event.clientX - dragStartX;
+  const deltaY = event.clientY - dragStartY;
+
+  // Wait until the gesture commits to an axis, so a vertical scroll on a phone
+  // isn't stolen and turned into a card change.
+  if (!dragAxis && Math.hypot(deltaX, deltaY) > 8) {
+    dragAxis = Math.abs(deltaX) > Math.abs(deltaY) ? "x" : "y";
+  }
+
+  if (dragAxis !== "x") {
+    return;
+  }
+
+  event.preventDefault();
+  dragOffsetX = deltaX;
+
+  // Drive the strip rather than the card. The card is positioned from the
+  // strip every frame, so moving one moves the other and they cannot disagree.
+  // A card's width of drag is one thumbnail's width of scroll.
+  filmstrip.scrollLeft = dragStartScroll - deltaX * (filmstripStep / slotStride());
+});
+
+function endDrag(event) {
+  if (dragPointerId !== event.pointerId) {
+    return;
+  }
+
+  // A drag that ends off the card still fires a click on the stage. Without
+  // this the viewer would close every time you swiped past the card's edge.
+  const wasDragging = dragAxis === "x";
+  swallowNextStageClick = dragAxis !== "";
+  dragPointerId = null;
+  dragAxis = "";
+
+  if (!wasDragging) {
+    return;
+  }
+
+  // A short fast flick should still change card even though it never dragged
+  // far enough to carry the next one into the middle. It has to be short as
+  // well as fast, and counted from where the drag started — a long fast drag
+  // has already moved the row, and adding a card on top would overshoot.
+  const elapsed = event.timeStamp - dragStartTime;
+  const distance = Math.abs(dragOffsetX);
+  const flicked = elapsed < 250 && distance > 30 && distance < slotStride() * 0.5;
+
+  // A flick asks for the next card; anything else glides to whichever card it
+  // was left nearest, which the scroll handler takes care of once the strip
+  // stops moving.
+  if (flicked) {
+    scrollFilmstripTo(
+      Math.min(Math.max(dragStartIndex + (dragOffsetX < 0 ? 1 : -1), 0), viewerCards.length - 1),
+      "smooth"
+    );
+  } else {
+    settleToNearestCard();
+  }
+
+  dragOffsetX = 0;
+}
+
+modalStage.addEventListener("pointerup", endDrag);
+modalStage.addEventListener("pointercancel", endDrag);
+modalStage.addEventListener("pointerleave", endDrag);
 
 modalClose.addEventListener("click", closeCardModal);
 modalPrevious.addEventListener("click", () => moveModalCard(-1));
 modalNext.addEventListener("click", () => moveModalCard(1));
 cardModal.addEventListener("click", (event) => {
-  if (event.target === cardModal) {
+  if (swallowNextStageClick) {
+    swallowNextStageClick = false;
+    return;
+  }
+
+  if (event.target === cardModal || event.target === modalStage) {
     closeCardModal();
   }
 });
@@ -484,26 +792,29 @@ document.addEventListener("click", (event) => {
   });
 });
 
+function setMenuOpen(isOpen) {
+  collectionPanel.setAttribute("data-open", isOpen);
+  menuBackdrop.setAttribute("data-open", isOpen);
+  collectionToggle.setAttribute("aria-expanded", isOpen);
+  // Menu and card viewer share the scroll lock; don't unlock under an open viewer.
+  document.body.classList.toggle("modal-open", isOpen || !cardModal.classList.contains("hidden"));
+}
+
 collectionToggle.addEventListener("click", () => {
-  const isOpen = collectionPanel.getAttribute("data-open") === "true";
-  const newState = !isOpen;
-  collectionPanel.setAttribute("data-open", newState);
-  collectionToggle.setAttribute("aria-expanded", newState);
+  setMenuOpen(collectionPanel.getAttribute("data-open") !== "true");
 });
 
 collectionPanel.querySelectorAll("[data-title]").forEach((option) => {
   option.addEventListener("click", () => {
     collectionTitle.textContent = option.dataset.title;
-    collectionPanel.setAttribute("data-open", "false");
-    collectionToggle.setAttribute("aria-expanded", "false");
+    setMenuOpen(false);
   });
 });
 
 document.addEventListener("click", (event) => {
   const isOpen = collectionPanel.getAttribute("data-open") === "true";
-  if (isOpen && !collectionPanel.contains(event.target) && event.target !== collectionToggle) {
-    collectionPanel.setAttribute("data-open", "false");
-    collectionToggle.setAttribute("aria-expanded", "false");
+  if (isOpen && !collectionPanel.contains(event.target) && !collectionToggle.contains(event.target)) {
+    setMenuOpen(false);
   }
 });
 
