@@ -511,7 +511,6 @@ function closeCardModal() {
   filmstripItems = [];
   modalCardId = null;
   viewerIndex = -1;
-  resetCardTransform();
   document.body.classList.remove("modal-open");
 }
 
@@ -614,21 +613,6 @@ new ResizeObserver(() => {
 
 /* --- Drag / swipe on the card -------------------------------------------- */
 
-function resetCardTransform() {
-  modalTrack.style.setProperty("--tilt-x", "0deg");
-  modalTrack.style.setProperty("--tilt-y", "0deg");
-}
-
-// Mouse-only flourish: the row leans towards the cursor.
-function tiltToPointer(event) {
-  const bounds = modalStage.getBoundingClientRect();
-  const horizontal = (event.clientX - bounds.left) / bounds.width;
-  const vertical = (event.clientY - bounds.top) / bounds.height;
-
-  modalTrack.style.setProperty("--tilt-y", `${(horizontal - 0.5) * 12}deg`);
-  modalTrack.style.setProperty("--tilt-x", `${(0.5 - vertical) * 12}deg`);
-}
-
 modalStage.addEventListener("pointerdown", (event) => {
   if (event.button > 0) {
     return;
@@ -647,9 +631,6 @@ modalStage.addEventListener("pointerdown", (event) => {
 
 modalStage.addEventListener("pointermove", (event) => {
   if (dragPointerId !== event.pointerId) {
-    if (event.pointerType === "mouse") {
-      tiltToPointer(event);
-    }
     return;
   }
 
@@ -716,13 +697,7 @@ function endDrag(event) {
 
 modalStage.addEventListener("pointerup", endDrag);
 modalStage.addEventListener("pointercancel", endDrag);
-modalStage.addEventListener("pointerleave", (event) => {
-  if (dragPointerId === null) {
-    resetCardTransform();
-  } else {
-    endDrag(event);
-  }
-});
+modalStage.addEventListener("pointerleave", endDrag);
 
 modalClose.addEventListener("click", closeCardModal);
 modalPrevious.addEventListener("click", () => moveModalCard(-1));
