@@ -252,8 +252,8 @@ let modalCardId = null;
 let viewerCards = [];
 let viewerIndex = -1;
 let filmstripItems = [];
+let itemCentres = [];
 let filmstripStep = 1;
-let filmstripBase = 0;
 let isAutoScrolling = false;
 let autoScrollTimer = 0;
 let settleTimer = 0;
@@ -339,17 +339,39 @@ function buildFilmstrip() {
     .join("");
 
   filmstripItems = [...filmstrip.querySelectorAll(".filmstrip-item")];
+  measureFilmstrip();
+}
 
-  // Geometry for turning a scroll position into an index and back. Measured
-  // from the real elements so it survives changes to thumb size and gap.
-  filmstripStep =
-    filmstripItems.length > 1 ? filmstripItems[1].offsetLeft - filmstripItems[0].offsetLeft : 1;
-  filmstripBase = filmstripItems.length ? centreOffsetFor(0) : 0;
+// Where each thumbnail's centre sits along the strip's content. Measured once
+// per layout rather than per scroll event, and re-measured when the strip
+// changes size — a rotated phone moves every one of these.
+function measureFilmstrip() {
+  itemCentres = filmstripItems.map((item) => item.offsetLeft + item.offsetWidth / 2);
+  filmstripStep = itemCentres.length > 1 ? itemCentres[1] - itemCentres[0] : 1;
 }
 
 function centreOffsetFor(index) {
-  const item = filmstripItems[index];
-  return item.offsetLeft - (filmstrip.clientWidth - item.offsetWidth) / 2;
+  return itemCentres[index] - filmstrip.clientWidth / 2;
+}
+
+// Which thumbnail is nearest the middle of the strip. The even spacing makes
+// rounding a good guess, but only a guess: at either end the scroll range runs
+// out before the guess does, so check the neighbours and take the real winner.
+function indexNearestCentre() {
+  const target = filmstrip.scrollLeft + filmstrip.clientWidth / 2;
+  const guess = Math.round((target - itemCentres[0]) / filmstripStep);
+  let best = Math.min(Math.max(guess, 0), itemCentres.length - 1);
+
+  for (let candidate = best - 1; candidate <= best + 1; candidate += 1) {
+    if (
+      itemCentres[candidate] !== undefined &&
+      Math.abs(itemCentres[candidate] - target) < Math.abs(itemCentres[best] - target)
+    ) {
+      best = candidate;
+    }
+  }
+
+  return best;
 }
 
 function scrollFilmstripTo(index, behavior) {
@@ -464,8 +486,7 @@ filmstrip.addEventListener("scroll", () => {
   if (!scrollFrame) {
     scrollFrame = requestAnimationFrame(() => {
       scrollFrame = 0;
-      const raw = Math.round((filmstrip.scrollLeft - filmstripBase) / filmstripStep);
-      markActive(Math.min(Math.max(raw, 0), viewerCards.length - 1));
+      markActive(indexNearestCentre());
     });
   }
 
@@ -482,6 +503,17 @@ filmstrip.addEventListener("click", (event) => {
     showCardAt(Number(item.dataset.index));
   }
 });
+
+// A resize moves every thumbnail, so the cached centres have to be rebuilt and
+// the current card pulled back to the middle.
+new ResizeObserver(() => {
+  if (!filmstripItems.length) {
+    return;
+  }
+
+  measureFilmstrip();
+  scrollFilmstripTo(viewerIndex, "auto");
+}).observe(filmstrip);
 
 /* --- Drag / swipe on the card -------------------------------------------- */
 

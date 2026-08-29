@@ -622,7 +622,11 @@ input {
   display: grid;
   justify-items: center;
   gap: 0.4rem;
-  width: 100%;
+  /* The width cap lives here rather than on .filmstrip, so the strip always
+     fills its container. Its end padding is a percentage, which resolves
+     against the container — if the two differ, the padding is wrong by the
+     difference and the end cards can't sit dead centre. */
+  width: min(96vw, 960px);
   min-width: 0;
 }
 
@@ -643,7 +647,6 @@ input {
   position: relative;
   gap: 0.5rem;
   width: 100%;
-  max-width: min(96vw, 960px);
   /* Half a thumb of padding at each end, so the first and last cards can
      still reach the centre of the strip. */
   padding: 0.5rem calc(50% - 1.65rem);
