@@ -222,6 +222,7 @@ const filterSelect = document.getElementById("filter-select");
 const sortSelect = document.getElementById("sort-select");
 const collectionToggle = document.getElementById("collection-toggle");
 const collectionPanel = document.getElementById("collection-panel");
+const menuBackdrop = document.getElementById("menu-backdrop");
 const collectionTitle = document.querySelector(".search-header h2");
 const installButton = document.getElementById("install-button");
 const cardModal = document.getElementById("card-modal");
@@ -484,26 +485,27 @@ document.addEventListener("click", (event) => {
   });
 });
 
+function setMenuOpen(isOpen) {
+  collectionPanel.setAttribute("data-open", isOpen);
+  menuBackdrop.setAttribute("data-open", isOpen);
+  collectionToggle.setAttribute("aria-expanded", isOpen);
+}
+
 collectionToggle.addEventListener("click", () => {
-  const isOpen = collectionPanel.getAttribute("data-open") === "true";
-  const newState = !isOpen;
-  collectionPanel.setAttribute("data-open", newState);
-  collectionToggle.setAttribute("aria-expanded", newState);
+  setMenuOpen(collectionPanel.getAttribute("data-open") !== "true");
 });
 
 collectionPanel.querySelectorAll("[data-title]").forEach((option) => {
   option.addEventListener("click", () => {
     collectionTitle.textContent = option.dataset.title;
-    collectionPanel.setAttribute("data-open", "false");
-    collectionToggle.setAttribute("aria-expanded", "false");
+    setMenuOpen(false);
   });
 });
 
 document.addEventListener("click", (event) => {
   const isOpen = collectionPanel.getAttribute("data-open") === "true";
-  if (isOpen && !collectionPanel.contains(event.target) && event.target !== collectionToggle) {
-    collectionPanel.setAttribute("data-open", "false");
-    collectionToggle.setAttribute("aria-expanded", "false");
+  if (isOpen && !collectionPanel.contains(event.target) && !collectionToggle.contains(event.target)) {
+    setMenuOpen(false);
   }
 });
 

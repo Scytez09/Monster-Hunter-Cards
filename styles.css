@@ -65,43 +65,106 @@ input {
   place-items: center;
   width: 2.8rem;
   height: 2.8rem;
-  border: 0px solid rgba(255, 255, 255, 0.45);
+  border: 2px solid transparent;
   border-radius: 0.5rem;
   background: rgba(158, 216, 236, 0);
-  color: transparent;
   cursor: pointer;
-  font-size: 1.5rem;
-  line-height: -2;
   outline: none;
   -webkit-tap-highlight-color: transparent;
-
-}
-.collection-menu::before {
-  position: absolute;
-  color: var(--text);
+  transition: background-color 0.28s ease, border-color 0.2s ease;
 }
 
-.collection-menu:hover {
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 0.5rem;
-}
-
+.collection-menu:hover,
 .collection-menu:focus-visible {
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 0.5rem;
-}
-
-.collection-menu[aria-expanded="false"]::before {
-  content: "☰";
-}
-
-.collection-menu[aria-expanded="true"]::before{
-  content: "✕";
-  color: var(--bg);  
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .collection-menu[aria-expanded="true"] {
   background: var(--text);
+}
+
+/* Three bars that cross into an X — sized in px so the open and closed
+   states are identical, unlike the ☰ / ✕ glyphs they replace. */
+.burger-icon,
+.burger-icon::before,
+.burger-icon::after {
+  width: 1.15rem;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--text);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.28s ease;
+}
+
+.burger-icon {
+  display: block;
+  position: relative;
+}
+
+.burger-icon::before,
+.burger-icon::after {
+  position: absolute;
+  left: 0;
+  content: "";
+}
+
+.burger-icon::before {
+  transform: translateY(-0.4rem);
+}
+
+.burger-icon::after {
+  transform: translateY(0.4rem);
+}
+
+.collection-menu[aria-expanded="true"] .burger-icon {
+  background: transparent;
+  transform: rotate(180deg);
+}
+
+.collection-menu[aria-expanded="true"] .burger-icon::before {
+  background: var(--bg);
+  transform: rotate(45deg);
+}
+
+.collection-menu[aria-expanded="true"] .burger-icon::after {
+  background: var(--bg);
+  transform: rotate(-45deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .burger-icon,
+  .burger-icon::before,
+  .burger-icon::after {
+    transition-duration: 0.01ms;
+  }
+}
+
+/* Shared scrim behind the side menu and the fullscreen card viewer.
+   Same tint for both; each sets how hard it dims and blurs. */
+.menu-backdrop,
+.card-modal {
+  background: rgba(4, 12, 21, var(--scrim-dim, 0.45));
+  backdrop-filter: blur(var(--scrim-blur, 2px));
+  -webkit-backdrop-filter: blur(var(--scrim-blur, 2px));
+}
+
+/* The card viewer dims harder — nothing should compete with the card. */
+.card-modal {
+  --scrim-dim: 0.82;
+  --scrim-blur: 6px;
+}
+
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.menu-backdrop[data-open="true"] {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .collection-options {
@@ -137,8 +200,8 @@ input {
 }
 
 .collection-options button {
-  
   border: 0;
+  border-radius: 2px;
   background: transparent;
   color: #f1f6f8;
   cursor: pointer;
@@ -153,7 +216,8 @@ input {
 }
 
 .collection-options .install-button {
-  
+  /* Square, so the divider above it stays one straight line. */
+  border-radius: 0;
   border-top: 1px solid rgba(158, 216, 236, 0.24);
   color: var(--accent);
   font-size: 0.72rem;
@@ -440,7 +504,7 @@ input {
 .card-grid {
   display: flex;
   flex-wrap: wrap;
-  justify-content: left;
+  justify-content: center;
   gap: 0.8rem;
 }
 
@@ -482,7 +546,6 @@ input {
   display: grid;
   place-items: center;
   padding: 2rem;
-  background: rgba(2, 9, 17, 0.96);
   perspective: 1200px;
   animation: modal-backdrop-in 220ms ease-out both;
 }
@@ -536,32 +599,53 @@ input {
   }
 }
 
-.modal-nav {
-  position: absolute;
-  top: 50%;
+/* The three viewer controls are one family: a soft dark disc that lifts to
+   the accent on hover. Icons are SVG so they centre geometrically — the ❮ ❯ ×
+   glyphs they replace sat off-centre inside their own line box. */
+.modal-nav,
+.modal-close {
   z-index: 1;
   display: grid;
   place-items: center;
   width: 3.2rem;
   height: 3.2rem;
-  border: transparent 1px solid;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--text);
-  font-size: 2rem;
-  /*line-height: 1;*/
   padding: 0;
+  border: 1px solid rgba(241, 246, 248, 0.16);
+  border-radius: 50%;
+  background: rgba(8, 18, 30, 0.55);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  color: var(--text);
   cursor: pointer;
-  transform: translateY(-50%);
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
   -webkit-tap-highlight-color: transparent;
 }
 
+.modal-nav svg,
+.modal-close svg {
+  width: 1.4rem;
+  height: 1.4rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .modal-nav:hover,
-.modal-nav:focus-visible {
+.modal-nav:focus-visible,
+.modal-close:hover,
+.modal-close:focus-visible {
   border-color: var(--accent-strong);
   background: var(--accent-strong);
   color: var(--bg);
   outline: none;
+}
+
+.modal-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .modal-previous {
@@ -608,18 +692,6 @@ input {
   position: absolute;
   top: calc(env(safe-area-inset-top) + 1rem);
   right: calc(env(safe-area-inset-right) + 1rem);
-  width: 2.8rem;
-  height: 2.8rem;
-  display: grid;
-  place-items: center;
-  border: 0;
-  background: transparent;
-  color: var(--text);
-  font-size: 3rem;
-  line-height: 1;
-  padding: 0;
-  cursor: pointer;
-  z-index: 1;
 }
 
 @media (max-width: 760px) {
