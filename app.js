@@ -227,7 +227,9 @@ const collectionTitle = document.querySelector(".search-header h2");
 const installButton = document.getElementById("install-button");
 const cardModal = document.getElementById("card-modal");
 const modalStage = document.getElementById("modal-stage");
+const modalCard = document.getElementById("modal-card");
 const modalImage = document.getElementById("modal-image");
+const incomingImage = document.getElementById("modal-image-incoming");
 const filmstrip = document.getElementById("filmstrip");
 const filmstripCaption = document.getElementById("filmstrip-caption");
 const modalClose = document.getElementById("modal-close");
@@ -258,6 +260,8 @@ let isAutoScrolling = false;
 let autoScrollTimer = 0;
 let settleTimer = 0;
 let scrollFrame = 0;
+let imageGeneration = 0;
+let wheelSettleTimer = 0;
 
 // Drag gesture state.
 let dragPointerId = null;
@@ -325,6 +329,10 @@ function renderCards() {
    The viewer works off a snapshot of whatever the grid is showing, so the
    filmstrip, the arrows and the swipe all walk the same list in the same order.
    --------------------------------------------------------------------------- */
+
+// One wheel notch is about 100px of delta, and one thumbnail is about 61px
+// apart, so this lands close to a card per notch.
+const WHEEL_TO_STRIP = 0.6;
 
 function buildFilmstrip() {
   filmstrip.innerHTML = viewerCards
@@ -405,7 +413,7 @@ function markActive(index) {
     `${viewerCards[index].name}  ·  ${viewerCards[index].numberCode || "—"}`;
 }
 
-function syncViewerImage(direction = "") {
+async function syncViewerImage(direction = "") {
   const card = viewerCards[viewerIndex];
 
   if (!card || modalImage.dataset.cardId === card.id) {
@@ -413,13 +421,48 @@ function syncViewerImage(direction = "") {
   }
 
   modalImage.dataset.cardId = card.id;
-  modalImage.src = card.image;
-  modalImage.alt = `${card.name} card`;
 
   if (direction) {
-    modalImage.classList.remove("swipe-next", "swipe-previous");
-    void modalImage.offsetWidth;
-    modalImage.classList.add(direction === "next" ? "swipe-next" : "swipe-previous");
+    modalCard.classList.remove("swipe-next", "swipe-previous");
+    void modalCard.offsetWidth;
+    modalCard.classList.add(direction === "next" ? "swipe-next" : "swipe-previous");
+  }
+
+  // The first card has nothing to fade from.
+  if (!modalImage.src) {
+    modalImage.src = card.image;
+    modalImage.alt = `${card.name} card`;
+  } else {
+    const generation = (imageGeneration += 1);
+    incomingImage.src = card.image;
+
+    // Decode before fading, so a card that hasn't been fetched yet holds the
+    // previous one on screen instead of flashing through an empty frame.
+    try {
+      await incomingImage.decode();
+    } catch {
+      // A src replaced mid-decode rejects; the generation check below drops it.
+    }
+
+    if (generation !== imageGeneration || modalImage.dataset.cardId !== card.id) {
+      return;
+    }
+
+    incomingImage.classList.add("is-visible");
+    await new Promise((resolve) => setTimeout(resolve, 190));
+
+    if (generation !== imageGeneration) {
+      return;
+    }
+
+    // Promote the faded-in layer to the base one, then hide the overlay without
+    // animating it back out — same pixels, so the handover is invisible.
+    modalImage.src = card.image;
+    modalImage.alt = `${card.name} card`;
+    incomingImage.style.transition = "none";
+    incomingImage.classList.remove("is-visible");
+    void incomingImage.offsetWidth;
+    incomingImage.style.transition = "";
   }
 
   // Warm the neighbours so an arrow press or a swipe lands on a decoded image.
@@ -464,8 +507,11 @@ function openCardModal(card) {
 
 function closeCardModal() {
   cardModal.classList.add("hidden");
+  imageGeneration += 1; // strands any crossfade still waiting on a decode
   modalImage.src = "";
   delete modalImage.dataset.cardId;
+  incomingImage.classList.remove("is-visible");
+  incomingImage.removeAttribute("src");
   filmstrip.innerHTML = "";
   filmstripItems = [];
   modalCardId = null;
@@ -490,11 +536,46 @@ filmstrip.addEventListener("scroll", () => {
     });
   }
 
-  // The big image is the expensive part, so it waits for a pause in the
-  // scrolling rather than being swapped on every thumbnail we fly past.
+  // The card follows the strip as you scrub rather than waiting for it to
+  // stop. The delay only coalesces the thumbnails flicked past within a single
+  // frame or two; the crossfade itself waits for the image to decode.
   clearTimeout(settleTimer);
-  settleTimer = setTimeout(syncViewerImage, 90);
+  settleTimer = setTimeout(syncViewerImage, 40);
 });
+
+/* --- Wheel ---------------------------------------------------------------- */
+
+// Chrome already turns a vertical wheel into horizontal movement over a
+// strip that only scrolls sideways, but it moves roughly a dozen cards per
+// notch. Taking the gesture over trades that for about one card per notch,
+// and lets the wheel work anywhere in the viewer rather than only over the
+// strip itself.
+cardModal.addEventListener(
+  "wheel",
+  (event) => {
+    if (viewerCards.length < 2) {
+      return;
+    }
+
+    const delta =
+      Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+
+    if (!delta) {
+      return;
+    }
+
+    event.preventDefault();
+    isAutoScrolling = false;
+    clearTimeout(autoScrollTimer);
+    filmstrip.scrollLeft += delta * WHEEL_TO_STRIP;
+
+    // Nothing snaps a scroll driven by assignment, so settle it by hand once
+    // the wheel goes quiet.
+    clearTimeout(wheelSettleTimer);
+    wheelSettleTimer = setTimeout(() => scrollFilmstripTo(indexNearestCentre(), "smooth"), 120);
+  },
+  { passive: false }
+);
 
 filmstrip.addEventListener("click", (event) => {
   const item = event.target.closest(".filmstrip-item");
@@ -518,22 +599,22 @@ new ResizeObserver(() => {
 /* --- Drag / swipe on the card -------------------------------------------- */
 
 function resetCardTransform() {
-  modalImage.classList.remove("is-dragging");
-  modalImage.style.setProperty("--drag-x", "0px");
-  modalImage.style.setProperty("--drag-tilt", "0deg");
-  modalImage.style.setProperty("--tilt-x", "0deg");
-  modalImage.style.setProperty("--tilt-y", "0deg");
-  modalImage.style.removeProperty("--drag-fade");
+  modalCard.classList.remove("is-dragging");
+  modalCard.style.setProperty("--drag-x", "0px");
+  modalCard.style.setProperty("--drag-tilt", "0deg");
+  modalCard.style.setProperty("--tilt-x", "0deg");
+  modalCard.style.setProperty("--tilt-y", "0deg");
+  modalCard.style.removeProperty("--drag-fade");
 }
 
 // Mouse-only flourish: the card leans towards the cursor.
 function tiltToPointer(event) {
-  const bounds = modalImage.getBoundingClientRect();
+  const bounds = modalCard.getBoundingClientRect();
   const horizontal = (event.clientX - bounds.left) / bounds.width;
   const vertical = (event.clientY - bounds.top) / bounds.height;
 
-  modalImage.style.setProperty("--tilt-y", `${(horizontal - 0.5) * 18}deg`);
-  modalImage.style.setProperty("--tilt-x", `${(0.5 - vertical) * 18}deg`);
+  modalCard.style.setProperty("--tilt-y", `${(horizontal - 0.5) * 18}deg`);
+  modalCard.style.setProperty("--tilt-x", `${(0.5 - vertical) * 18}deg`);
 }
 
 modalStage.addEventListener("pointerdown", (event) => {
@@ -546,7 +627,7 @@ modalStage.addEventListener("pointerdown", (event) => {
   dragStartY = event.clientY;
   dragOffsetX = 0;
   dragAxis = "";
-  modalImage.classList.add("is-dragging");
+  modalCard.classList.add("is-dragging");
   modalStage.setPointerCapture(event.pointerId);
 });
 
@@ -575,9 +656,9 @@ modalStage.addEventListener("pointermove", (event) => {
   dragOffsetX = deltaX;
 
   const progress = Math.max(-1, Math.min(1, deltaX / modalStage.clientWidth));
-  modalImage.style.setProperty("--drag-x", `${deltaX}px`);
-  modalImage.style.setProperty("--drag-tilt", `${progress * -10}deg`);
-  modalImage.style.setProperty("--drag-fade", String(1 - Math.abs(progress) * 0.45));
+  modalCard.style.setProperty("--drag-x", `${deltaX}px`);
+  modalCard.style.setProperty("--drag-tilt", `${progress * -10}deg`);
+  modalCard.style.setProperty("--drag-fade", String(1 - Math.abs(progress) * 0.45));
 });
 
 function endDrag(event) {
