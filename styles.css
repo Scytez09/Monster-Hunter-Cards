@@ -552,7 +552,6 @@ input {
   justify-items: center;
   gap: 0.75rem;
   padding: 1.75rem 1.5rem calc(env(safe-area-inset-bottom) + 0.9rem);
-  perspective: 1400px;
   animation: modal-backdrop-in 220ms ease-out both;
 }
 
@@ -609,10 +608,7 @@ input {
      shrinks to fit and its contents spill to one side instead of keeping the
      middle card centred. */
   flex: 0 0 auto;
-  transform:
-    translate3d(var(--track-x, 0px), 0, 0)
-    rotateX(var(--tilt-x, 0deg))
-    rotateY(var(--tilt-y, 0deg));
+  transform: translate3d(var(--track-x, 0px), 0, 0);
   animation: modal-card-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
@@ -632,9 +628,16 @@ input {
 
 /* The card in the middle stands up out of the row. Neighbours sit back, so
    you can see what is coming without them competing with it. */
+/* The lean towards the cursor belongs to the card you are actually looking at,
+   not to its neighbours — so it lives here rather than on the row. Its own
+   perspective(), because the ancestor's does not reach this far down. */
 .modal-slot.is-current {
   opacity: 1;
-  transform: scale(1);
+  transform:
+    perspective(1400px)
+    rotateX(var(--tilt-x, 0deg))
+    rotateY(var(--tilt-y, 0deg))
+    scale(1);
 }
 
 .modal-slot img {
