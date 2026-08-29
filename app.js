@@ -796,6 +796,8 @@ function setMenuOpen(isOpen) {
   collectionPanel.setAttribute("data-open", isOpen);
   menuBackdrop.setAttribute("data-open", isOpen);
   collectionToggle.setAttribute("aria-expanded", isOpen);
+  // Menu and card viewer share the scroll lock; don't unlock under an open viewer.
+  document.body.classList.toggle("modal-open", isOpen || !cardModal.classList.contains("hidden"));
 }
 
 collectionToggle.addEventListener("click", () => {

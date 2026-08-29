@@ -142,14 +142,14 @@ input {
    Same tint for both; each sets how hard it dims and blurs. */
 .menu-backdrop,
 .card-modal {
-  background: rgba(4, 12, 21, var(--scrim-dim, 0.45));
+  background: rgba(4, 12, 21, var(--scrim-dim, 0.7));
   backdrop-filter: blur(var(--scrim-blur, 2px));
   -webkit-backdrop-filter: blur(var(--scrim-blur, 2px));
 }
 
 /* The card viewer dims harder — nothing should compete with the card. */
 .card-modal {
-  --scrim-dim: 0.82;
+  --scrim-dim: 0.9;
   --scrim-blur: 6px;
 }
 
