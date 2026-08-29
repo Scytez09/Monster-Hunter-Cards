@@ -257,6 +257,9 @@ let filmstripItems = [];
 let itemCentres = [];
 let filmstripStep = 1;
 let scrollFrame = 0;
+let restTimer = 0;
+let wheelAccumulator = 0;
+let wheelResetTimer = 0;
 
 // Drag gesture state.
 let dragPointerId = null;
@@ -328,9 +331,9 @@ function renderCards() {
    filmstrip, the arrows and the swipe all walk the same list in the same order.
    --------------------------------------------------------------------------- */
 
-// One wheel notch is about 100px of delta, and one thumbnail is about 61px
-// apart, so this lands close to a card per notch.
-const WHEEL_TO_STRIP = 0.6;
+// Wheel delta needed to move on by one card. A mouse notch is about 100, so
+// one notch is one card; a trackpad's smaller deltas add up.
+const WHEEL_STEP = 45;
 
 function buildFilmstrip() {
   filmstrip.innerHTML = viewerCards
@@ -529,15 +532,34 @@ filmstrip.addEventListener("scroll", () => {
       updateTrack();
     });
   }
+
+  // Coming to rest between two cards looks broken, so once the scrolling
+  // stops the strip glides on to the nearest one. This is a soft, eased move
+  // rather than the hard jump CSS scroll-snap was making.
+  clearTimeout(restTimer);
+  restTimer = setTimeout(settleToNearestCard, 140);
 });
+
+function settleToNearestCard() {
+  if (dragPointerId !== null || !itemCentres.length) {
+    return; // still under the finger
+  }
+
+  const index = indexNearestCentre();
+
+  // The settle scrolls too, which lands us back here; without this it would
+  // chase its own tail forever.
+  if (Math.abs(filmstrip.scrollLeft - centreOffsetFor(index)) > 2) {
+    scrollFilmstripTo(index, "smooth");
+  }
+}
 
 /* --- Wheel ---------------------------------------------------------------- */
 
-// Chrome already turns a vertical wheel into horizontal movement over a
-// strip that only scrolls sideways, but it moves roughly a dozen cards per
-// notch. Taking the gesture over trades that for about one card per notch,
-// and lets the wheel work anywhere in the viewer rather than only over the
-// strip itself.
+// Chrome already turns a vertical wheel into horizontal movement over a strip
+// that only scrolls sideways, but it moves roughly a dozen cards per notch.
+// Taking the gesture over steps one card at a time instead, and because every
+// step lands on a card the wheel can never leave you stranded between two.
 cardModal.addEventListener(
   "wheel",
   (event) => {
@@ -553,7 +575,20 @@ cardModal.addEventListener(
     }
 
     event.preventDefault();
-    filmstrip.scrollLeft += delta * WHEEL_TO_STRIP;
+    wheelAccumulator += delta;
+
+    // A trackpad sends many small deltas where a mouse sends one big one, so
+    // accumulate and forget the remainder once the gesture stops.
+    clearTimeout(wheelResetTimer);
+    wheelResetTimer = setTimeout(() => {
+      wheelAccumulator = 0;
+    }, 200);
+
+    if (Math.abs(wheelAccumulator) >= WHEEL_STEP) {
+      const direction = Math.sign(wheelAccumulator);
+      wheelAccumulator = 0;
+      moveModalCard(direction);
+    }
   },
   { passive: false }
 );
@@ -664,13 +699,16 @@ function endDrag(event) {
   const distance = Math.abs(dragOffsetX);
   const flicked = elapsed < 250 && distance > 30 && distance < slotStride() * 0.5;
 
-  // Only a flick moves on its own — it is a request for the next card. A drag
-  // is left exactly where it was let go.
+  // A flick asks for the next card; anything else glides to whichever card it
+  // was left nearest, which the scroll handler takes care of once the strip
+  // stops moving.
   if (flicked) {
     scrollFilmstripTo(
       Math.min(Math.max(dragStartIndex + (dragOffsetX < 0 ? 1 : -1), 0), viewerCards.length - 1),
       "smooth"
     );
+  } else {
+    settleToNearestCard();
   }
 
   dragOffsetX = 0;
