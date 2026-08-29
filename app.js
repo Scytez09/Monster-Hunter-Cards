@@ -258,6 +258,7 @@ let itemCentres = [];
 let filmstripStep = 1;
 let scrollFrame = 0;
 let restTimer = 0;
+let stripGlideFrame = 0;
 let wheelAccumulator = 0;
 let wheelResetTimer = 0;
 
@@ -391,15 +392,61 @@ function indexNearestTo(target) {
   return best;
 }
 
-function scrollFilmstripTo(index) {
+function scrollFilmstripTo(index, { animate = true } = {}) {
   if (!filmstripItems[index]) {
     return;
   }
 
-  // Straight there. The card cuts to the next one the way a phone gallery
-  // does; nothing slides or eases on the way.
-  filmstrip.scrollLeft = centreOffsetFor(index);
-  updateTrack();
+  const target = centreOffsetFor(index);
+
+  if (!animate) {
+    stopStripGlide();
+    filmstrip.scrollLeft = target;
+    updateTrack();
+    return;
+  }
+
+  glideStripTo(target);
+}
+
+// The strip slides the new thumbnail into the middle. Only the strip: the card
+// itself has already cut to the new one by the time this starts, so none of
+// this motion is on the main picture.
+function glideStripTo(target) {
+  stopStripGlide();
+
+  const from = filmstrip.scrollLeft;
+  const distance = target - from;
+
+  if (!distance) {
+    return;
+  }
+
+  const duration = Math.min(520, 220 + Math.abs(distance) * 0.25);
+  const started = performance.now();
+  const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+
+  const step = (now) => {
+    const progress = Math.min((now - started) / duration, 1);
+    filmstrip.scrollLeft = from + distance * easeOut(progress);
+
+    if (progress < 1) {
+      stripGlideFrame = requestAnimationFrame(step);
+      return;
+    }
+
+    stripGlideFrame = 0;
+    updateTrack();
+  };
+
+  stripGlideFrame = requestAnimationFrame(step);
+}
+
+function stopStripGlide() {
+  if (stripGlideFrame) {
+    cancelAnimationFrame(stripGlideFrame);
+    stripGlideFrame = 0;
+  }
 }
 
 // Cheap enough to run on every frame of a fling: the highlight and the caption.
@@ -452,8 +499,8 @@ function renderSlots(centre) {
 // along with it; now the card holds still and is simply replaced once a
 // different thumbnail is the nearest one to the middle.
 function updateTrack() {
-  if (!itemCentres.length) {
-    return;
+  if (!itemCentres.length || stripGlideFrame) {
+    return; // mid-slide towards a card that has already been chosen
   }
 
   const centre = indexNearestCentre();
@@ -469,12 +516,12 @@ function slotStride() {
   return modalSlots[0].offsetWidth + parseFloat(getComputedStyle(modalTrack).columnGap || 0);
 }
 
-function showCardAt(index, { scrollStrip = true } = {}) {
+function showCardAt(index, { scrollStrip = true, animate = true } = {}) {
   markActive(index);
   renderSlots(index);
 
   if (scrollStrip) {
-    scrollFilmstripTo(index);
+    scrollFilmstripTo(index, { animate });
   } else {
     updateTrack();
   }
@@ -500,7 +547,7 @@ function openCardModal(card) {
   cardModal.classList.remove("hidden");
   document.body.classList.add("modal-open");
   buildFilmstrip();
-  showCardAt(startIndex);
+  showCardAt(startIndex, { animate: false });
   modalClose.focus();
 }
 
@@ -612,7 +659,7 @@ new ResizeObserver(() => {
   }
 
   measureFilmstrip();
-  scrollFilmstripTo(viewerIndex);
+  scrollFilmstripTo(viewerIndex, { animate: false });
 }).observe(filmstrip);
 
 /* --- Drag / swipe on the card -------------------------------------------- */
@@ -622,6 +669,7 @@ modalStage.addEventListener("pointerdown", (event) => {
     return;
   }
 
+  stopStripGlide();
   dragCommitBase = 0;
   dragPointerId = event.pointerId;
   dragStartX = event.clientX;
