@@ -1,4 +1,4 @@
-const CACHE_NAME = "monster-hunter-atlas-v1";
+const CACHE_NAME = "monster-hunter-atlas-v2";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -54,3 +54,4 @@ self.addEventListener("fetch", (event) => {
     })
   );
 });
+

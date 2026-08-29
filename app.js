@@ -220,7 +220,8 @@ const cardCount = document.getElementById("card-count");
 const searchInput = document.getElementById("search-input");
 const filterSelect = document.getElementById("filter-select");
 const sortSelect = document.getElementById("sort-select");
-const collectionMenu = document.querySelector(".collection-menu");
+const collectionToggle = document.getElementById("collection-toggle");
+const collectionPanel = document.getElementById("collection-panel");
 const collectionTitle = document.querySelector(".search-header h2");
 const installButton = document.getElementById("install-button");
 const cardModal = document.getElementById("card-modal");
@@ -228,6 +229,14 @@ const modalImage = document.getElementById("modal-image");
 const modalClose = document.getElementById("modal-close");
 const modalPrevious = document.getElementById("modal-previous");
 const modalNext = document.getElementById("modal-next");
+
+// Set topbar height CSS variable for proper panel positioning
+function updateTopbarHeight() {
+  const topbar = document.querySelector(".topbar");
+  document.documentElement.style.setProperty("--topbar-height", topbar.offsetHeight + "px");
+}
+updateTopbarHeight();
+window.addEventListener("resize", updateTopbarHeight);
 
 let activeFilter = "all";
 let activeSort = "name";
@@ -475,16 +484,26 @@ document.addEventListener("click", (event) => {
   });
 });
 
-collectionMenu.querySelectorAll("[data-title]").forEach((option) => {
+collectionToggle.addEventListener("click", () => {
+  const isOpen = collectionPanel.getAttribute("data-open") === "true";
+  const newState = !isOpen;
+  collectionPanel.setAttribute("data-open", newState);
+  collectionToggle.setAttribute("aria-expanded", newState);
+});
+
+collectionPanel.querySelectorAll("[data-title]").forEach((option) => {
   option.addEventListener("click", () => {
     collectionTitle.textContent = option.dataset.title;
-    collectionMenu.removeAttribute("open");
+    collectionPanel.setAttribute("data-open", "false");
+    collectionToggle.setAttribute("aria-expanded", "false");
   });
 });
 
 document.addEventListener("click", (event) => {
-  if (collectionMenu.open && !collectionMenu.contains(event.target)) {
-    collectionMenu.removeAttribute("open");
+  const isOpen = collectionPanel.getAttribute("data-open") === "true";
+  if (isOpen && !collectionPanel.contains(event.target) && event.target !== collectionToggle) {
+    collectionPanel.setAttribute("data-open", "false");
+    collectionToggle.setAttribute("aria-expanded", "false");
   }
 });
 

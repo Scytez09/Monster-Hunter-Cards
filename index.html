@@ -11,35 +11,40 @@
     <title>Monster Hunter Card Search</title>
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icons/monster-mark.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <header class="topbar">
       <div class="brand-wrap">
-        <details class="collection-menu">
-          <summary class="menu-button" aria-label="Open game card collections">&#9776;</summary>
-          <div class="collection-options" role="menu" aria-label="Game card collections">
-            <h2 class="collection-options-title">Game Collections</h2>
-            <button type="button" role="menuitem" data-title="MONSTER HUNTER WORLD: ICEBORNE">
-              Monster Hunter World: Iceborne
-            </button>
-            <button type="button" role="menuitem" data-title="MONSTER HUNTER RISE: SUNBREAK">
-              Monster Hunter Rise: Sunbreak
-            </button>
-            <button type="button" role="menuitem" data-title="MONSTER HUNTER WILDS">
-              Monster Hunter Wilds
-            </button>
-            <button id="install-button" class="install-button show" type="button" role="menuitem">
-              Install App
-            </button>
-          </div>
-        </details>
+        <button class="collection-menu" id="collection-toggle" aria-label="Open game card collections" aria-expanded="false">&#9776;</button>
         <div>
           <p class="brand-label">Monster Hunter Cards</p>
           <h1>Custom Physiology Cards by Scytez</h1>
         </div>
       </div>
     </header>
+    
+    <div class="collection-options" role="menu" aria-label="Game card collections" id="collection-panel">
+      <h2 class="collection-options-title">Game Collections</h2>
+      <button type="button" role="menuitem" data-title="MONSTER HUNTER WORLD: ICEBORNE">
+        Monster Hunter World: Iceborne
+      </button>
+      <button type="button" role="menuitem" data-title="MONSTER HUNTER RISE: SUNBREAK">
+        Monster Hunter Rise: Sunbreak
+      </button>
+      <button type="button" role="menuitem" data-title="MONSTER HUNTER WILDS">
+        Monster Hunter Wilds
+      </button>
+      <button id="install-button" class="install-button show" type="button" role="menuitem">
+        Install App
+      </button>
+    </div>
 
     <main class="container">
       <section class="search-panel">
@@ -52,7 +57,7 @@
 
         <div class="search-box">
           <input id="search-input" type="search" placeholder="Search Monsters..." aria-label="Search card collection" />
-          <span class="search-icon" aria-hidden="true">🔍︎</span>
+          <span class="search-icon" aria-hidden="true"></span>
         </div>
 
       </section>
@@ -61,7 +66,7 @@
         <div class="results-head">
           <div class="results-left">
             <h3 id="results-title"></h3>
-            <div class="result-pill"><span id="card-count">0</span> cards found</div>
+            <div class="result-pill"><span id="card-count">0</span> Cards found</div>
           </div>
           <div class="results-controls">
             <div class="filter-control">
