@@ -272,6 +272,7 @@ let dragStartTime = 0;
 let dragStartIndex = 0;
 let dragCommitBase = 0;
 let swallowNextStageClick = false;
+let swipeSettleTimer = 0;
 
 function getVisibleCards() {
   const query = searchInput.value.trim().toLowerCase();
@@ -538,6 +539,22 @@ function moveModalCard(direction) {
   showCardAt(nextIndex);
 }
 
+function setPageScrollLocked(isLocked) {
+  const body = document.body;
+  const isAlreadyLocked = body.classList.contains("modal-open");
+
+  if (isLocked && !isAlreadyLocked) {
+    // Measure before hiding the scrollbar, then reserve that exact width so
+    // the page's content area does not grow or shift sideways.
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    body.style.paddingRight = `${scrollbarWidth}px`;
+    body.classList.add("modal-open");
+  } else if (!isLocked && isAlreadyLocked) {
+    body.classList.remove("modal-open");
+    body.style.paddingRight = "";
+  }
+}
+
 function openCardModal(card) {
   viewerCards = getVisibleCards();
   viewerIndex = -1;
@@ -545,7 +562,7 @@ function openCardModal(card) {
   const startIndex = Math.max(0, viewerCards.findIndex((item) => item.id === card.id));
 
   cardModal.classList.remove("hidden");
-  document.body.classList.add("modal-open");
+  setPageScrollLocked(true);
   buildFilmstrip();
   showCardAt(startIndex, { animate: false });
   modalClose.focus();
@@ -562,7 +579,7 @@ function closeCardModal() {
   filmstripItems = [];
   modalCardId = null;
   viewerIndex = -1;
-  document.body.classList.remove("modal-open");
+  setPageScrollLocked(collectionPanel.getAttribute("data-open") === "true");
 }
 
 /* --- Filmstrip scrubbing -------------------------------------------------- */
@@ -665,7 +682,7 @@ new ResizeObserver(() => {
 /* --- Drag / swipe on the card -------------------------------------------- */
 
 modalStage.addEventListener("pointerdown", (event) => {
-  if (event.button > 0) {
+  if (event.button > 0 || swipeSettleTimer) {
     return;
   }
 
@@ -700,28 +717,11 @@ modalStage.addEventListener("pointermove", (event) => {
   }
 
   event.preventDefault();
-  dragOffsetX = deltaX;
-
-  const threshold = slotStride() * COMMIT_FRACTION;
-  let since = deltaX - dragCommitBase;
-
-  // Past the threshold the drag hands over to the next card there and then,
-  // mid-gesture, and the gesture re-bases so a long drag can keep stepping.
-  // The card is therefore always on its way to a card, never parked between
-  // two of them, so lifting a finger has nothing left to correct.
-  while (Math.abs(since) >= threshold) {
-    const direction = since < 0 ? 1 : -1;
-    const next = Math.min(Math.max(viewerIndex + direction, 0), viewerCards.length - 1);
-
-    if (next === viewerIndex) {
-      break; // at one end; let it lean instead of stepping
-    }
-
-    dragCommitBase += direction * -threshold;
-    since = deltaX - dragCommitBase;
-    showCardAt(next);
-  }
-
+  // Follow the finger so the next or previous card visibly slides in.
+  modalStage.classList.add("is-swiping");
+  dragOffsetX = Math.max(-slotStride(), Math.min(slotStride(), deltaX));
+  modalTrack.style.transition = "none";
+  modalTrack.style.transform = `translateX(${dragOffsetX}px)`;
 });
 
 // How far you drag before the card hands over to the next one.
@@ -732,13 +732,45 @@ function endDrag(event) {
     return;
   }
 
+  const wasHorizontalSwipe = dragAxis === "x";
+  const threshold = slotStride() * COMMIT_FRACTION;
+  const direction = dragOffsetX < 0 ? 1 : -1;
+  const nextIndex = Math.min(Math.max(viewerIndex + direction, 0), viewerCards.length - 1);
+
   // A drag that ends off the card still fires a click on the stage. Without
   // this the viewer would close every time you swiped past the card's edge.
   swallowNextStageClick = dragAxis !== "";
   dragPointerId = null;
   dragAxis = "";
-  dragOffsetX = 0;
   dragCommitBase = 0;
+
+  if (!wasHorizontalSwipe) {
+    return;
+  }
+
+  const shouldChangeCard =
+    event.type === "pointerup" && Math.abs(dragOffsetX) >= threshold && nextIndex !== viewerIndex;
+  const targetOffset = shouldChangeCard ? (direction > 0 ? -slotStride() : slotStride()) : 0;
+
+  // Give the browser one frame to register the finger's final position before
+  // sending the row to its destination. This avoids a jump on quick swipes.
+  requestAnimationFrame(() => {
+    modalTrack.style.transition = "transform 300ms cubic-bezier(0.22, 1, 0.36, 1)";
+    modalTrack.style.transform = `translateX(${targetOffset}px)`;
+  });
+
+  swipeSettleTimer = window.setTimeout(() => {
+    if (shouldChangeCard) {
+      showCardAt(nextIndex);
+    }
+
+    // Reset after the slots have been updated, ready for the next swipe.
+    modalTrack.style.transition = "none";
+    modalTrack.style.transform = "translateX(0)";
+    modalStage.classList.remove("is-swiping");
+    dragOffsetX = 0;
+    swipeSettleTimer = 0;
+  }, 300);
 }
 
 modalStage.addEventListener("pointerup", endDrag);
@@ -843,7 +875,7 @@ function setMenuOpen(isOpen) {
   menuBackdrop.setAttribute("data-open", isOpen);
   collectionToggle.setAttribute("aria-expanded", isOpen);
   // Menu and card viewer share the scroll lock; don't unlock under an open viewer.
-  document.body.classList.toggle("modal-open", isOpen || !cardModal.classList.contains("hidden"));
+  setPageScrollLocked(isOpen || !cardModal.classList.contains("hidden"));
 }
 
 collectionToggle.addEventListener("click", () => {
